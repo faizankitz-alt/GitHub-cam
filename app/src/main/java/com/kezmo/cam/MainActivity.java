@@ -31,6 +31,7 @@ public class MainActivity extends Activity {
         web = new WebView(this);
         setContentView(web);
         web.getSettings().setJavaScriptEnabled(true);
+        web.getSettings().setDomStorageEnabled(true); // remembers camera settings
         web.getSettings().setMediaPlaybackRequiresUserGesture(false);
         web.addJavascriptInterface(new Bridge(), "Android");
         web.setWebChromeClient(new WebChromeClient() {
