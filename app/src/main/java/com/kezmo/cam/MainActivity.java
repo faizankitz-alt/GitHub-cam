@@ -15,11 +15,16 @@ import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class MainActivity extends Activity {
     private WebView web;
@@ -34,6 +39,28 @@ public class MainActivity extends Activity {
         web.getSettings().setDomStorageEnabled(true); // remembers camera settings
         web.getSettings().setMediaPlaybackRequiresUserGesture(false);
         web.addJavascriptInterface(new Bridge(), "Android");
+        // Serves the bundled AI files. Every other web request is refused, so nothing is loaded from the internet.
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                Uri u = request.getUrl();
+                if ("data".equals(u.getScheme()) || "blob".equals(u.getScheme())) return null;
+                String path = u.getPath();
+                if ("kezmocam.invalid".equals(u.getHost()) && path != null && path.startsWith("/ai/") && !path.contains("..")) {
+                    String mime = path.endsWith(".wasm") ? "application/wasm"
+                            : path.endsWith("js") ? "text/javascript" : "application/octet-stream";
+                    try {
+                        HashMap<String, String> headers = new HashMap<>();
+                        headers.put("Access-Control-Allow-Origin", "*");
+                        return new WebResourceResponse(mime, null, 200, "OK", headers, getAssets().open(path.substring(1)));
+                    } catch (Exception e) {
+                        // missing file: fall through to "not found"
+                    }
+                }
+                return new WebResourceResponse("text/plain", "UTF-8", 404, "Not Found",
+                        new HashMap<>(), new ByteArrayInputStream(new byte[0]));
+            }
+        });
         web.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {

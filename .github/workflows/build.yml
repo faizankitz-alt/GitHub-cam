@@ -14,6 +14,25 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Download on-device AI files
+        run: |
+          set -e
+          d=app/src/main/assets/ai
+          mkdir -p $d/wasm
+          npm pack @mediapipe/tasks-vision@0.10.14
+          tar xzf mediapipe-tasks-vision-0.10.14.tgz
+          cp package/vision_bundle.mjs $d/
+          cp package/wasm/vision_wasm_internal.* package/wasm/vision_wasm_nosimd_internal.* $d/wasm/
+          base=https://storage.googleapis.com/mediapipe-models
+          curl -fsSL -o $d/selfie_segmenter.tflite $base/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite
+          curl -fsSL -o $d/magic_touch.tflite $base/interactive_segmenter/magic_touch/float32/1/magic_touch.tflite
+          curl -fsSL -o $d/face_landmarker.task $base/face_landmarker/face_landmarker/float16/1/face_landmarker.task
+          ls -lR $d
+      - name: Test AI portrait and face lens
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+          python test/ci_test.py
       - run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
