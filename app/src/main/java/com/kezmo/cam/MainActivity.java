@@ -5,12 +5,14 @@ import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Base64;
+import android.view.KeyEvent;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
@@ -28,6 +30,8 @@ import java.util.HashMap;
 
 public class MainActivity extends Activity {
     private WebView web;
+    private volatile boolean volumeShutter = true;
+    private volatile Uri lastSaved;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -35,6 +39,8 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         web = new WebView(this);
         setContentView(web);
+        getWindow().setStatusBarColor(Color.BLACK);
+        getWindow().setNavigationBarColor(Color.BLACK);
         web.getSettings().setJavaScriptEnabled(true);
         web.getSettings().setDomStorageEnabled(true); // remembers camera settings
         web.getSettings().setMediaPlaybackRequiresUserGesture(false);
@@ -101,6 +107,25 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        int key = event.getKeyCode();
+        if (volumeShutter && (key == KeyEvent.KEYCODE_VOLUME_UP || key == KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            if (event.getAction() == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0)
+                web.evaluateJavascript("window.volumeShot && volumeShot()", null);
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    @Override
+    public void onBackPressed() {
+        // first close any open panel inside the app
+        web.evaluateJavascript("!!(window.backPressed && backPressed())", handled -> {
+            if (!"true".equals(handled)) finish();
+        });
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
         web.evaluateJavascript("window.appPause && appPause()", null);
@@ -162,6 +187,7 @@ public class MainActivity extends Activity {
                 ContentValues v = new ContentValues();
                 v.put(MediaStore.MediaColumns.IS_PENDING, 0);
                 getContentResolver().update(uri, v, null, null);
+                lastSaved = uri;
                 out = null;
                 uri = null;
                 return true;
@@ -176,6 +202,22 @@ public class MainActivity extends Activity {
             if (uri != null) getContentResolver().delete(uri, null, null);
             out = null;
             uri = null;
+        }
+
+        @JavascriptInterface
+        public void setVolumeShutter(boolean on) {
+            volumeShutter = on;
+        }
+
+        /** Opens the latest photo or video, or the gallery if nothing was taken yet. */
+        @JavascriptInterface
+        public void openLast() {
+            Uri target = lastSaved != null ? lastSaved : MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, target).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION));
+            } catch (Exception ignored) {
+                // no gallery app can open it
+            }
         }
 
         @JavascriptInterface
