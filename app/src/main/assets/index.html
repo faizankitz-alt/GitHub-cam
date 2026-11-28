@@ -566,24 +566,18 @@ fine:['ImageSegmenter','selfie_multiclass_256x256.tflite',{runningMode:'IMAGE',o
 object:['InteractiveSegmenter','magic_touch.tflite',{outputConfidenceMasks:true,outputCategoryMask:false}],
 face:['FaceLandmarker','face_landmarker.task',{runningMode:'VIDEO',numFaces:2}],
 pose:['PoseLandmarker','pose_landmarker_lite.task',{runningMode:'VIDEO',numPoses:3}], // live pose coach
-poseRef:['PoseLandmarker','pose_landmarker_full.task',{runningMode:'IMAGE',numPoses:4,outputSegmentationMasks:true,minPoseDetectionConfidence:.4}], // imported photo
+poseRef:['PoseLandmarker','pose_landmarker_full.task',{runningMode:'IMAGE',numPoses:4,minPoseDetectionConfidence:.4}], // imported photo
 things:['ObjectDetector','efficientdet_lite0.tflite',{runningMode:'IMAGE',scoreThreshold:.35,maxResults:10}]};
 // runs one model on one picture (also copied into the worker, so it must not use anything outside itself)
 function infer(task,name,input,ts,point){
   if(name==='face')return {faces:task.detectForVideo(input,ts).faceLandmarks||[]};
   if(name==='things')return {things:task.detect(input).detections.map(d=>{const b=d.boundingBox,c=d.categories[0];
     return {name:c.categoryName,score:c.score,x:b.originX/input.width,y:b.originY/input.height,w:b.width/input.width,h:b.height/input.height}})};
-  let out=null;
   if(name==='pose'||name==='poseRef'){
-    const read=r=>{
-      const people=(r.landmarks||[]).map(l=>l.map(p=>[p.x,p.y,p.visibility??1]));let mask=null,w=0,h=0;
-      for(const m of r.segmentationMasks||[]){const d=m.getAsFloat32Array();if(!mask){w=m.width;h=m.height;mask=new Uint8Array(w*h)}
-        for(let i=0;i<mask.length;i++){const v=d[i]*255;if(v>mask[i])mask[i]=v}}
-      out={people,mask,w,h};if(r.close)r.close();
-    };
-    if(name==='pose')read(task.detectForVideo(input,ts));else task.detect(input,read);
-    return out;
+    const r=name==='pose'?task.detectForVideo(input,ts):task.detect(input);
+    return {people:(r.landmarks||[]).map(l=>l.map(p=>[p.x,p.y,p.visibility??1]))};
   }
+  let out=null;
   const done=r=>{
     const list=r.confidenceMasks,fine=name==='fine',m=fine?list[0]:list[list.length-1],data=m.getAsFloat32Array(),w=m.width,h=m.height,mask=new Uint8Array(w*h);
     // multiclass model: the first mask is the background. Tap model: the tapped thing must be the sharp side.
@@ -604,7 +598,7 @@ function aiWorker(){
       if(!tasks[m.name]){const [cls,file,opt]=m.model;tasks[m.name]=await lib[cls].createFromOptions(files,{baseOptions:{modelAssetPath:m.base+file},...opt})}
       const out=infer(tasks[m.name],m.name,m.input,m.ts,m.point);
       postMessage({id:m.id,out},out.mask?[out.mask.buffer]:[]);
-    }catch(err){postMessage({id:m.id,error:String(err)})}
+    }catch(err){delete tasks[m.name];postMessage({id:m.id,error:String(err)})}
     finally{m.input.close()}
   })};
 }
@@ -626,7 +620,8 @@ async function inPage(name,input,ts,point){
     const {lib,files}=await AI.lib,[cls,file,opt]=MODELS[name];
     AI.tasks[name]=AI.tasks[name]||lib[cls].createFromOptions(files,{baseOptions:{modelAssetPath:AIBASE+file},...opt});
     return infer(await AI.tasks[name],name,input,ts,point);
-  }finally{input.close()}
+  }catch(e){delete AI.tasks[name];throw e}
+  finally{input.close()}
 }
 async function ask(name,src,w,h,point){
   const k=Math.min(1,512/Math.max(w,h));
@@ -1599,6 +1594,29 @@ function placeColours(c,mask,mw,mh){
   const found=[];if(green>n*.18)found.push('khet','ped','phool');if(sky>top*.35)found.push('pahad','chhat');
   return {found,label:[green>n*.18?'hariyali':'',sky>top*.35?'khula aasman':''].filter(Boolean).join(', ')};
 }
+// how many of the body points lie inside a cut-out (0..1)
+function covers(o,f,W,H){
+  let inside=0,all=0;
+  for(const k of JOINTS){if(!f.seen(k))continue;all++;const x=Math.floor(f.j[k][0]/W*o.w),y=Math.floor(f.j[k][1]/H*o.h);
+    for(let dy=-3,hit=false;dy<=3&&!hit;dy++)for(let dx=-3;dx<=3&&!hit;dx++){const a=x+dx,b=y+dy;if(a>=0&&b>=0&&a<o.w&&b<o.h&&o.mask[b*o.w+a]>110){inside++;hit=true}}}
+  return all?inside/all:0;
+}
+async function silhouettes(c,people,attempt){
+  let union=null;
+  for(const f of people.slice(0,4)){
+    const torso=['ls','rs','lh','rh'].filter(f.seen),pts=torso.length?torso:['head'];
+    const at={x:clamp(pts.reduce((s,k)=>s+f.j[k][0],0)/pts.length/c.width,0,1),y:clamp(pts.reduce((s,k)=>s+f.j[k][1],0)/pts.length/c.height,0,1)};
+    for(const name of ['object','person']){
+      const o=await attempt(name,at);if(!o.mask)continue;
+      const area=o.mask.reduce((s,v)=>s+(v>110),0)/o.mask.length;
+      if(area<.004||area>.75||covers(o,f,c.width,c.height)<.55)continue;
+      if(!union)union={mask:new Uint8Array(o.mask),w:o.w,h:o.h};
+      else if(union.w===o.w&&union.h===o.h)for(let i=0;i<o.mask.length;i++)union.mask[i]=Math.max(union.mask[i],o.mask[i]);
+      break;
+    }
+  }
+  return union;
+}
 function maskCanvas(mask,w,h){
   const c=el('canvas',{width:w,height:h}),x=c.getContext('2d'),d=x.createImageData(w,h);
   for(let i=0;i<w*h;i++){d.data[i*4]=d.data[i*4+1]=d.data[i*4+2]=255;d.data[i*4+3]=mask[i]>110?255:0}
@@ -1613,13 +1631,17 @@ async function importPhoto(file){
     const bmp=await createImageBitmap(file),k=Math.min(1,960/Math.max(bmp.width,bmp.height)),c=el('canvas',{width:Math.round(bmp.width*k),height:Math.round(bmp.height*k)});
     c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);bmp.close();
     status('AI insaan, cheezein aur background alag kar raha hai… pehli baar thoda time lagta hai');
-    const attempt=async name=>{for(let i=0;i<2;i++){try{return await wait(ask(name,c,c.width,c.height),60000)}catch(e){if(e.message!=='retry'||i){console.warn('import',name,e);return {error:String(e.message||e)}}}}};
-    const body=await attempt('poseRef'),things=await attempt('things');
+    const attempt=async(name,at)=>{for(let i=0;i<2;i++){try{return await wait(ask(name,c,c.width,c.height,at),60000)}catch(e){if(e.message!=='retry'||i){console.warn('import',name,e);return {error:String(e.message||e)}}}}};
+    let body=await attempt('poseRef');
+    if(!body.people?.length){const other=await attempt('pose');if(other.people?.length)body=other} // smaller model as a second try
+    const things=await attempt('things');
     if(job!==importJob||box.hidden)return;
     const people=(body.people||[]).map(l=>fromLandmarks(l,c.width,c.height)).filter(f=>f.seen('ls')||f.seen('rs')||f.seen('head'));
-    const place=placeColours(c,body.mask,body.w,body.h),objects=(things.things||[]).filter(t=>t.name!=='person');
+    const cut=await silhouettes(c,people,attempt);
+    if(job!==importJob||box.hidden)return;
+    const place=placeColours(c,cut?.mask,cut?.w,cut?.h),objects=(things.things||[]).filter(t=>t.name!=='person');
     const tags=[...new Set([...objects.map(t=>THING_PLACES[t.name]).filter(Boolean),...place.found])];
-    imported={c,people,objects,place,tags,mask:body.mask&&people.length?maskCanvas(body.mask,body.w,body.h):null,error:body.error&&things.error?body.error:''};
+    imported={c,people,objects,place,tags,mask:cut?maskCanvas(cut.mask,cut.w,cut.h):null,error:body.error||things.error||''};
     photoView='all';showImport();
   }catch(e){console.warn(e);if(job===importJob)status('Ye photo nahi khul payi. JPG ya PNG photo chuno.')}
 }
@@ -1670,7 +1692,7 @@ function showImport(){
   const suggested=findPoses(kind,'',tags.length?tags:null).list.slice(0,8);
   box.append(el('div',{className:'head'},iconButton('back','Wapas',{onclick:closePhoto}),el('h1',{textContent:'Photo'}),chip('Doosri photo',false,()=>$('pick').click())),
     el('div',{id:'photoBody'},canvas,el('div',{className:'row'},...views.map(([id,label])=>chip(label,photoView===id,()=>{photoView=id;showImport()}))),
-      ...(error?[el('div',{className:'note',textContent:'AI is phone par nahi chala: '+error.slice(0,140)})]:[]),lines,
+      ...(error?[el('div',{className:'note',textContent:'Kuch AI is phone par nahi chala: '+error.slice(0,140)})]:[]),lines,
       ...(people.length?[el('div',{className:'card g'},...advice().map(t=>el('div',{className:'item',textContent:t}))),el('button',{id:'copyPose',className:'on',textContent:'Ye pose camera par lagao',onclick:useImported})]:[]),
       el('h2',{textContent:'Is photo ke hisaab se aur poses'}),
       el('div',{className:'seg'},...KINDS.map(([id,label])=>el('button',{textContent:label,onclick:()=>{poseKind=id;poseQuery='';posePlaces=tags.length?tags:null;$('photo').hidden=true;openPoses()}}))),
