@@ -2,6 +2,7 @@ package com.kezmo.cam;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -16,6 +17,7 @@ import android.view.KeyEvent;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.PermissionRequest;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -32,6 +34,7 @@ public class MainActivity extends Activity {
     private WebView web;
     private volatile boolean volumeShutter = true;
     private volatile Uri lastSaved;
+    private ValueCallback<Uri[]> picking;
 
     @Override
     protected void onCreate(Bundle state) {
@@ -68,6 +71,21 @@ public class MainActivity extends Activity {
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
+            // "import photo": open the phone's own picker, no storage permission needed
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+                if (picking != null) picking.onReceiveValue(null);
+                picking = callback;
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*");
+                try {
+                    startActivityForResult(Intent.createChooser(intent, "Photo chuno"), 7);
+                } catch (ActivityNotFoundException e) {
+                    picking = null;
+                    return false;
+                }
+                return true;
+            }
+
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
                 runOnUiThread(() -> {
@@ -104,6 +122,15 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int code, String[] p, int[] r) {
         load();
+    }
+
+    @Override
+    protected void onActivityResult(int request, int result, Intent data) {
+        super.onActivityResult(request, result, data);
+        if (request == 7 && picking != null) {
+            picking.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result, data));
+            picking = null;
+        }
     }
 
     @Override

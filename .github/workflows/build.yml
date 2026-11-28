@@ -28,6 +28,8 @@ jobs:
           curl -fsSL -o $d/selfie_multiclass_256x256.tflite $base/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite
           curl -fsSL -o $d/magic_touch.tflite $base/interactive_segmenter/magic_touch/float32/1/magic_touch.tflite
           curl -fsSL -o $d/face_landmarker.task $base/face_landmarker/face_landmarker/float16/1/face_landmarker.task
+          for m in lite full; do curl -fsSL -o $d/pose_landmarker_$m.task $base/pose_landmarker/pose_landmarker_$m/float16/latest/pose_landmarker_$m.task; done
+          curl -fsSL -o $d/efficientdet_lite0.tflite $base/object_detector/efficientdet_lite0/float16/latest/efficientdet_lite0.tflite
           ls -lR $d
       - name: Test AI portrait and face lens
         run: |
@@ -35,8 +37,8 @@ jobs:
           python -m playwright install --with-deps chromium
           python test/ci_test.py
       - run: gradle assembleDebug --no-daemon
-      - run: cp app/build/outputs/apk/debug/app-debug.apk KezmoCam-v5.1.apk
+      - run: cp app/build/outputs/apk/debug/app-debug.apk KezmoCam-v6.0.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: KezmoCam-v5.1-APK
-          path: KezmoCam-v5.1.apk
+          name: KezmoCam-v6.0-APK
+          path: KezmoCam-v6.0.apk

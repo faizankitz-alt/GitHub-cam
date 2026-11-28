@@ -57,6 +57,8 @@ with sync_playwright() as p:
                         row=(a,b)=>{let s=0;for(let i=Math.floor(a*h)*w;i<Math.floor(b*h)*w;i++)s+=d[i]>127;return s/((b-a)*h*w)};
                         return {centre:d[Math.floor(.6*h)*w+(w>>1)],top:row(0,.2),bottom:row(.8,1)}}""")
                     check('still-portrait', still['centre'] > 127 and still['bottom'] > still['top'], str({k: round(v, 2) for k, v in still.items()}))
+                    kept = page.evaluate("async()=>{const o=await ask('fine',video,video.videoWidth,video.videoHeight);return solid(o.mask,o.w,o.h)}")
+                    check('still-subject-accepted', kept)
                 else:
                     ok = ok and m['tap'] > 127
                 check(kind, ok, str({k: round(v, 2) for k, v in m.items()}))
@@ -65,6 +67,33 @@ with sync_playwright() as p:
         except Exception as e:
             check(kind, False, str(e).split('\n')[0] + ' | ' + page.evaluate("document.getElementById('msg').textContent"))
         page.close()
+    # poses: real pose and object models, then the whole "import photo" flow
+    page = browser.new_page(viewport={'width': 390, 'height': 800})
+    page.on('pageerror', lambda e: errors.append(str(e)))
+    page.on('console', lambda m: m.text.startswith(('AI', 'import', 'coach')) and errors.append(m.text))
+    page.add_init_script(f'window.SRC="{IMAGES["portrait"]}";' + CAMERA)
+    page.route('https://kezmocam.invalid/**', route)
+    page.goto('https://kezmocam.invalid/')
+    try:
+        page.wait_for_function('stream && video.videoWidth > 0', timeout=30000)
+        live = page.evaluate("async()=>(await ask('pose',video,video.videoWidth,video.videoHeight)).people.length")
+        check('pose-live', live >= 1, f'people={live}')
+        found = page.evaluate("""async()=>{const i=new Image();i.src=window.DOGS;await i.decode();return (await ask('things',i,i.width,i.height)).things.map(t=>t.name)}""".replace('window.DOGS', repr(IMAGES['cats_and_dogs'])))
+        check('objects', bool({'cat', 'dog'} & set(found)), str(found))
+        page.click('#side button[aria-label="Poses"]')
+        with page.expect_file_chooser() as chooser:
+            page.click('#poses >> text=Photo se')
+        chooser.value.set_files({'name': 'a.jpg', 'mimeType': 'image/jpeg', 'buffer': base64.b64decode(IMAGES['portrait'].split(',')[1])})
+        page.wait_for_selector('#photoCanvas', timeout=180000)
+        r = page.evaluate("""()=>{const m=imported.mask;let area=0;if(m){const d=m.getContext('2d').getImageData(0,0,m.width,m.height).data;for(let i=3;i<d.length;i+=4)area+=d[i]>0;area/=m.width*m.height}
+            return {people:imported.people.length,area,error:imported.error,advice:advice()}}""")
+        check('import', r['people'] >= 1 and 0.05 < r['area'] < 0.95, str(r))
+        page.click('#copyPose')
+        page.wait_for_function("document.getElementById('coach').textContent.includes('match')", timeout=90000)
+        check('coach', True, page.evaluate("document.getElementById('coach').textContent"))
+    except Exception as e:
+        check('poses', False, str(e).split('\n')[0] + ' | ' + page.evaluate("document.body.innerText.slice(0,200)"))
+    page.close()
     browser.close()
 
 summary = ' ; '.join(results + errors[:6]).replace('\n', ' ')[:3500]

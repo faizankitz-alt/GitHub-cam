@@ -95,9 +95,34 @@ button.switch:after{content:'';position:absolute;width:24px;height:24px;border-r
 button.switch.on:after{left:24px}
 .dot{width:34px;height:34px;border-radius:50%;flex:none}
 button.dot.on{outline:3px solid #fff;outline-offset:2px}
+#guide{position:absolute;pointer-events:none}
+#guidebar{position:absolute;left:8px;right:8px;top:60px;border-radius:22px;padding:8px 8px 4px;z-index:2;text-align:center}
+#guidebar b{display:block;font-size:11px;opacity:.7}
+#coach{font-size:14px;line-height:1.35;padding:3px 4px}
+#guidebar .row{justify-content:safe center;gap:4px}
+#guidebar button{padding:6px 8px;min-width:33px}
+body.guiding #msg{top:176px}
+#poses,#photo{position:absolute;inset:0;background:#000;z-index:15;display:flex;flex-direction:column;padding:12px 12px 0}
+body.glass #poses,body.glass #photo{background:#000c;-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%)}
+#poses h1,#photo h1{font-size:21px;flex:1}
+#kinds{margin:2px 0 8px}
+#kinds button{padding:9px 4px}
+#poses input[type=search]{flex:none}
+#poseGrid,.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;align-content:start;padding:8px 0 30px}
+#poseGrid{flex:1;min-height:0;overflow-y:auto}
+button.posecard{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 4px 8px;border-radius:18px;white-space:normal}
+.posecard canvas{width:100%;height:auto}
+.posecard span{font-size:11px;line-height:1.25}
+.wide{grid-column:1/-1}
+#photoBody{overflow-y:auto;padding-bottom:40px;flex:1;min-height:0}
+#photoCanvas{display:block;width:100%;max-height:44vh;object-fit:contain;border-radius:18px}
+#photoBody h2{font-size:15px;margin:6px 0 8px}
+#photoBody .item{font-size:13px;padding:9px 0}
+#copyPose{width:100%;padding:13px;margin-bottom:14px}
+#photoStatus{font-size:14px;text-align:center;padding:40px 20px}
 [hidden]{display:none!important}
 </style></head><body>
-<div id="stage"><canvas id="view"></canvas><div id="grid" hidden></div><div id="level" hidden></div><div id="ring"></div><div id="count"></div><button id="perm" hidden>Permission settings kholo</button></div>
+<div id="stage"><canvas id="view"></canvas><canvas id="guide" hidden></canvas><div id="grid" hidden></div><div id="level" hidden></div><div id="ring"></div><div id="count"></div><button id="perm" hidden>Permission settings kholo</button></div>
 <div id="top"><button id="torch" class="round g" aria-label="Torch"></button><div id="info"></div><button id="gear" class="round g" aria-label="Settings"></button></div>
 <div id="msg" class="g"></div>
 <div id="side"></div>
@@ -105,13 +130,18 @@ button.dot.on{outline:3px solid #fff;outline-offset:2px}
 <div id="bar"><button id="thumb" class="g" aria-label="Gallery"></button><button id="shot" aria-label="Capture"><i></i></button><button id="flip" class="round g" aria-label="Flip"></button></div></div>
 <div id="sheet" class="sheet g" hidden><div class="head" id="sheetHead"></div><div id="tabs"></div><div id="panel"></div></div>
 <div id="quick" class="sheet g" style="bottom:auto" hidden></div>
+<div id="guidebar" class="g" hidden></div>
 <div id="more" hidden></div>
+<div id="poses" hidden></div>
+<div id="photo" hidden></div>
+<input id="pick" type="file" accept="image/*" hidden>
 <video id="v" autoplay playsinline muted hidden></video>
 <script>
 'use strict';
 const $=id=>document.getElementById(id), video=$('v'), view=$('view');
 const el=(tag,props={},...kids)=>{const e=Object.assign(document.createElement(tag),props);e.append(...kids);return e};
-const say=t=>$('msg').textContent=t;
+let sayTimer=0;
+const say=t=>{$('msg').textContent=t;clearTimeout(sayTimer);if(t)sayTimer=setTimeout(()=>$('msg').textContent='',4000)};
 const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 
 /* ---------- filter parameters: [key, label, min, max] ---------- */
@@ -193,8 +223,8 @@ const zeros=()=>Object.fromEntries(PARAMS.map(p=>[p[0],0]));
 const presetVals=code=>{const o=zeros();for(const k in code)o[PARAMS[CODES.indexOf(k)][0]]=code[k];return o};
 
 const PORTRAIT=[['blur','Background blur',0,100,60],['edge','Kinara (+ zyada sharp)',-50,50,10],
-['feather','Edge softness',1,100,22],['bokeh','Bokeh lights',0,100,0],['bgDark','Background dark',0,100,10],['bgLight','Background white',0,100,0],
-['bgSat','Background color',-100,100,0],['bgWarm','Background warm/cool',-100,100,0],['subSat','Subject color',-100,100,0],['light','Subject light',-50,50,6],
+['feather','Edge softness',1,100,22],['bokeh','Bokeh lights',0,100,0],['bgDark','Background dark',0,100,0],['bgLight','Background white',0,100,0],
+['bgSat','Background color',-100,100,0],['bgWarm','Background warm/cool',-100,100,0],['subSat','Subject color',-100,100,0],['light','Subject light',-50,50,0],
 ['smooth','Skin smooth',0,100,20],['zoomBlur','Motion zoom',0,100,0]];
 const LOOK=Object.fromEntries(PORTRAIT.filter(p=>p[0]!=='edge').map(p=>[p[0],p[4]]));
 const STYLES={'Natural':{blur:45,smooth:15},'Soft':{blur:55,smooth:50,light:10,bgLight:12,feather:35},'DSLR':{blur:90,bokeh:35,bgSat:10,feather:16},
@@ -202,7 +232,7 @@ const STYLES={'Natural':{blur:45,smooth:15},'Soft':{blur:55,smooth:50,light:10,b
 'Mono Studio':{blur:45,bgSat:-100,subSat:-100,bgDark:60,light:12},'Colour Pop':{blur:35,bgSat:-100,subSat:18},'White High-Key':{blur:60,bgLight:88,light:14,smooth:40},
 'Cinematic':{blur:65,bgWarm:-65,bgDark:25,subSat:6},'Golden':{blur:55,bgWarm:75,bokeh:45,light:10},'Motion Zoom':{blur:30,zoomBlur:85},'Vintage':{blur:40,bgWarm:35,bgSat:-45,smooth:25}};
 const MODES=['AI Aadmi','AI Cheez (tap)'];
-const APP_VERSION='5.1';
+const APP_VERSION='6.0';
 const DEF_TOP={timer:0,grid:false,aspect:0,level:false,watermark:false};
 const DEF_UI={rotate:true,glass:true,blur:14,tint:14,accent:'#ffd23f',sound:true,volume:true,keep:true,markText:'Shot on Kezmo Cam'};
 const defaultsLow=()=>({preset:'Normal',edits:{},strengths:{},lens:'None',
@@ -226,15 +256,26 @@ let stream=null,track=null,facing=S.facing,videoMode=S.videoMode,rec=null,starti
 countdown=0,tab='Filters',tilt=0,hdBroken=false,openedRes=-1,moreTab='General',query='',saving=Promise.resolve();
 
 /* ---------- WebGL ---------- */
-let gl,progMain,progCopy,progBlur,vtex,mtex,fbos=[],fboW=0,fboH=0;
+let gl,progMain,progCopy,progBlur,progClean,vtex,mtex,fbos=[],fboW=0,fboH=0;
 const glc=document.createElement('canvas');
 const VS=`attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}`;
-const FS_COPY=`precision mediump float;varying vec2 v;uniform sampler2D tex,maskTex;uniform vec2 scale,off,maskOff;uniform float weighted,bokeh;void main(){
+const FS_COPY=`precision mediump float;varying vec2 v;uniform sampler2D tex,maskTex;uniform vec2 scale,off;uniform float weighted,bokeh;void main(){
  vec2 uv=.5+(v-.5)*scale+off;
- float a=weighted>.5?max(.1,1.-smoothstep(.15,.6,texture2D(maskTex,uv-maskOff).r)):1.;
+ float a=weighted>.5?max(.1,1.-smoothstep(.15,.6,texture2D(maskTex,uv).r)):1.;
  vec3 c=texture2D(tex,uv).rgb;
  a*=(1.+bokeh*4.*pow(dot(c,vec3(.3,.6,.1)),5.))/(1.+bokeh*4.); // bright points weigh more: round light bokeh
  gl_FragColor=vec4(c*a,a);}`;
+// removes colour speckles and fine grain from a saved photo before any filter touches it
+const FS_CLEAN=`precision highp float;varying vec2 v;uniform sampler2D tex;uniform vec2 px;uniform float amount,radius;
+vec3 ycc(vec3 c){float y=dot(c,vec3(.299,.587,.114));return vec3(y,(c.b-y)*.564,(c.r-y)*.713);}
+void main(){vec3 c=ycc(texture2D(tex,v).rgb);
+ vec2 cs=c.yz*.15;float cw=.15;
+ for(int i=0;i<24;i++){float a=float(i)*2.39996,r=sqrt((float(i)+.5)/24.)*radius;vec3 q=ycc(texture2D(tex,v+vec2(cos(a),sin(a))*r*px).rgb);
+  vec2 dc=q.yz-c.yz;float dy=(q.x-c.x)/(.05+.07*amount),w=exp(-dy*dy-dot(dc,dc)*22.);cs+=q.yz*w;cw+=w;}
+ float ys=c.x,yw=1.;
+ for(int i=0;i<8;i++){float a=float(i)*.7854;vec3 q=ycc(texture2D(tex,v+vec2(cos(a),sin(a))*px*1.4).rgb);float d=(q.x-c.x)/(.012+.04*amount),w=exp(-d*d);ys+=q.x*w;yw+=w;}
+ float y=mix(c.x,ys/yw,amount*.8);vec2 u=mix(c.yz,cs/cw,min(1.,amount*1.2));
+ float r=y+u.y/.713,b=y+u.x/.564;gl_FragColor=vec4(r,(y-.299*r-.114*b)/.587,b,1.);}`;
 const FS_BLUR=`precision mediump float;varying vec2 v;uniform sampler2D tex;uniform vec2 dir;void main(){
  vec4 c=texture2D(tex,v)*.227027;
  c+=(texture2D(tex,v+dir*1.3846)+texture2D(tex,v-dir*1.3846))*.316216;
@@ -243,7 +284,7 @@ const FS_BLUR=`precision mediump float;varying vec2 v;uniform sampler2D tex;unif
 const FS_MAIN=`precision highp float;varying vec2 v;uniform sampler2D tex,soft,maskTex;uniform vec2 scale,off,px;uniform float seed,aspect,srcAspect,useMask;uniform vec4 warp[4];
 uniform float ${PARAMS.map(p=>p[0]==='log'?'logAmt':p[0]).join(',')};
 uniform float pOn,feather,bgDark,bgSat,light,smoothAmt,edge,bgLight,subSat,bgWarm,zoomBlur,nr;
-uniform vec2 srcPx,maskPx,maskOff,zc;
+uniform vec2 srcPx,maskPx,zc;
 float lum(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
 // bring colours back into range without flattening detail
 vec3 fit(vec3 c){float l=clamp(lum(c),0.,1.),hi=max(c.r,max(c.g,c.b)),lo=min(c.r,min(c.g,c.b));
@@ -255,7 +296,7 @@ vec3 boost(vec3 c,float k){float l=lum(c);
 // AI mask, snapped to the real colour edges of the picture
 float matte(vec2 uv,vec3 ref){float sum=0.,tw=0.;
  for(int i=-1;i<=1;i++)for(int j=-1;j<=1;j++){vec2 o=vec2(float(i),float(j))*maskPx*1.3;vec3 d=texture2D(tex,uv+o).rgb-ref;
-  float w=exp(-dot(d,d)*30.)+.04;sum+=texture2D(maskTex,uv+o-maskOff).r*w;tw+=w;}
+  float w=exp(-dot(d,d)*30.)+.04;sum+=texture2D(maskTex,uv+o).r*w;tw+=w;}
  return sum/tw;}
 void main(){
  vec2 uv=.5+(v-.5)*scale+off;
@@ -333,7 +374,7 @@ function texture(w,h){
 function initGL(){
   gl=glc.getContext('webgl',{preserveDrawingBuffer:true,antialias:false,alpha:false});
   if(!gl){say('Is phone par filter engine (WebGL) nahi chala');return}
-  progMain=program(FS_MAIN);progCopy=program(FS_COPY);progBlur=program(FS_BLUR);
+  progMain=program(FS_MAIN);progCopy=program(FS_COPY);progClean=program(FS_CLEAN);progBlur=program(FS_BLUR);
   gl.bindBuffer(gl.ARRAY_BUFFER,gl.createBuffer());
   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0);gl.vertexAttribPointer(0,2,gl.FLOAT,false,0,0);
@@ -357,6 +398,30 @@ function transform(g,still){
   return {scale:[g.sx*zoom*(facing==='user'&&S.mirror?-1:1),g.sy*zoom],off:S.steady&&!still?[steady.cx*g.sx,-steady.cy*g.sy]:[0,0]};
 }
 let lastT=transform({sx:1,sy:1},true);
+// how noisy is this picture? measured as colour speckle in its calmest patches
+const patch=el('canvas',{width:48,height:48});
+function speckle(src,w,h){
+  const x=patch.getContext('2d',{willReadFrequently:true}),found=[];
+  for(let j=0;j<5;j++)for(let i=0;i<5;i++){
+    x.drawImage(src,Math.round((i+.5)/5*(w-48)),Math.round((j+.5)/5*(h-48)),48,48,0,0,48,48);const d=x.getImageData(0,0,48,48).data;let sum=0;
+    for(let by=0;by<48;by+=8)for(let bx=0;bx<48;bx+=8){let a=0,b=0,aa=0,bb=0;
+      for(let y=by;y<by+8;y++)for(let k=(y*48+bx)*4,e=k+32;k<e;k+=4){const l=d[k]*.299+d[k+1]*.587+d[k+2]*.114,u=(d[k+2]-l)*.564,v=(d[k]-l)*.713;a+=u;b+=v;aa+=u*u;bb+=v*v}
+      sum+=(Math.sqrt(Math.max(0,aa/64-(a/64)**2))+Math.sqrt(Math.max(0,bb/64-(b/64)**2)))/2}
+    found.push(sum/36);
+  }
+  return found.sort((a,b)=>a-b)[7];
+}
+const cleanAmount=(src,w,h)=>S.nr===0?0:S.nr===2?1:clamp((speckle(src,w,h)-1.2)/1.6,0,1);
+function cleaned(w,h,amount){ // two passes over the full picture: small speckles first, then wider blotches
+  const made=[0,1].map(()=>{gl.activeTexture(gl.TEXTURE0);const t=texture(w,h),f=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,f);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);return {t,f,ok:gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE}});
+  const free=()=>made.forEach(m=>{gl.deleteTexture(m.t);gl.deleteFramebuffer(m.f)});
+  if(made.some(m=>!m.ok)){free();return null}
+  const p=progClean,size=Math.max(w,h)/3000;gl.useProgram(p.p);gl.viewport(0,0,w,h);gl.uniform1i(p.u('tex'),0);gl.uniform2f(p.u('px'),1/w,1/h);gl.uniform1f(p.u('amount'),amount);
+  let from=vtex;
+  made.forEach((m,i)=>{gl.bindFramebuffer(gl.FRAMEBUFFER,m.f);gl.bindTexture(gl.TEXTURE_2D,from);gl.uniform1f(p.u('radius'),Math.max(2,(i?13:5)*size));gl.drawArrays(gl.TRIANGLES,0,3);from=m.t});
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  return {t:from,free};
+}
 function render(src,w,h,{target=view,still=false,ratio=0,mark=true}={}){
   if(!gl||gl.isContextLost())return;
   const limit=still?Math.min(4096,gl.getParameter(gl.MAX_TEXTURE_SIZE)):rec?3840:1920;
@@ -364,8 +429,9 @@ function render(src,w,h,{target=view,still=false,ratio=0,mark=true}={}){
   if(glc.width!==g.W||glc.height!==g.H){glc.width=g.W;glc.height=g.H}
   gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,vtex);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
-  const P=lookNow(),pOn=P.on&&!comparing&&!!AI.mask,useMask=pOn; // blur only ever follows what the AI has found
-  const vals=effective(),maskOff=still&&src!==video?[0,0]:AI.off;
+  const amount=still&&!comparing?cleanAmount(src,w,h):0,clean=amount>.05?cleaned(w,h,amount):null,source=clean?clean.t:vtex;
+  const P=drawLook(),pOn=P.on&&!comparing&&!!AI.mask,useMask=pOn; // blur only ever follows what the AI has found
+  const vals=effective();
   if(pOn||vals.clarity){
     const bw=Math.max(2,Math.round(g.W/g.H>1?360:360*g.W/g.H)),bh=Math.max(2,Math.round(bw*g.H/g.W));
     if(bw!==fboW||bh!==fboH){
@@ -376,8 +442,8 @@ function render(src,w,h,{target=view,still=false,ratio=0,mark=true}={}){
     }
     gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,null);gl.activeTexture(gl.TEXTURE0);
     gl.viewport(0,0,bw,bh);
-    gl.bindTexture(gl.TEXTURE_2D,vtex);gl.bindFramebuffer(gl.FRAMEBUFFER,fbos[0].f);
-    gl.useProgram(progCopy.p);gl.uniform1i(progCopy.u('tex'),0);gl.uniform1i(progCopy.u('maskTex'),2);gl.uniform1f(progCopy.u('weighted'),useMask?1:0);gl.uniform2fv(progCopy.u('maskOff'),maskOff);gl.uniform1f(progCopy.u('bokeh'),pOn?P.bokeh/100:0);
+    gl.bindTexture(gl.TEXTURE_2D,source);gl.bindFramebuffer(gl.FRAMEBUFFER,fbos[0].f);
+    gl.useProgram(progCopy.p);gl.uniform1i(progCopy.u('tex'),0);gl.uniform1i(progCopy.u('maskTex'),2);gl.uniform1f(progCopy.u('weighted'),useMask?1:0);gl.uniform1f(progCopy.u('bokeh'),pOn?P.bokeh/100:0);
     gl.uniform2fv(progCopy.u('scale'),scale);gl.uniform2fv(progCopy.u('off'),off);gl.drawArrays(gl.TRIANGLES,0,3);
     gl.useProgram(progBlur.p);gl.uniform1i(progBlur.u('tex'),0);
     const radius=pOn?.15+P.blur/100*1.5:1;
@@ -388,7 +454,7 @@ function render(src,w,h,{target=view,still=false,ratio=0,mark=true}={}){
     }
     gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,fbos[0].t);gl.activeTexture(gl.TEXTURE0);
   }
-  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,g.W,g.H);gl.bindTexture(gl.TEXTURE_2D,vtex);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,g.W,g.H);gl.bindTexture(gl.TEXTURE_2D,source);
   const m=progMain;gl.useProgram(m.p);gl.uniform1i(m.u('tex'),0);gl.uniform1i(m.u('soft'),1);gl.uniform1i(m.u('maskTex'),2);
   gl.uniform2fv(m.u('scale'),scale);gl.uniform2fv(m.u('off'),off);
   // sharpen between neighbouring OUTPUT pixels, so a large sensor image does not turn into dots
@@ -396,11 +462,12 @@ function render(src,w,h,{target=view,still=false,ratio=0,mark=true}={}){
   gl.uniform1f(m.u('seed'),still?1:performance.now()%1000);gl.uniform1f(m.u('aspect'),g.W/g.H);gl.uniform1f(m.u('srcAspect'),w/h);gl.uniform1f(m.u('useMask'),useMask?1:0);
   for(const key in vals)gl.uniform1f(m.u(key==='log'?'logAmt':key),vals[key]);
   gl.uniform4fv(m.u('warp[0]'),warps(w,h));
-  const pu={pOn:pOn?1:0,feather:P.feather/100,bgDark:P.bgDark/100,bgSat:P.bgSat/100,light:P.light/100,smoothAmt:P.smooth/100,edge:P.edge/100,bgLight:P.bgLight/100,subSat:P.subSat/100,bgWarm:P.bgWarm/100,zoomBlur:P.zoomBlur/100,nr:comparing?0:nrAmount(w,h)};
-  gl.uniform2f(m.u('srcPx'),1/w,1/h);gl.uniform2f(m.u('maskPx'),1/(AI.mw||256),1/(AI.mh||256));gl.uniform2fv(m.u('maskOff'),maskOff);
+  const pu={pOn:pOn?1:0,feather:P.feather/100,bgDark:P.bgDark/100,bgSat:P.bgSat/100,light:P.light/100,smoothAmt:P.smooth/100,edge:P.edge/100,bgLight:P.bgLight/100,subSat:P.subSat/100,bgWarm:P.bgWarm/100,zoomBlur:P.zoomBlur/100,nr:comparing||clean?0:nrAmount(w,h)};
+  gl.uniform2f(m.u('srcPx'),1/w,1/h);gl.uniform2f(m.u('maskPx'),1/(AI.mw||256),1/(AI.mh||256));
   gl.uniform2fv(m.u('zc'),[(aimShown.x-.5-off[0])/scale[0]+.5,(.5-aimShown.y-off[1])/scale[1]+.5]);
   for(const key in pu)gl.uniform1f(m.u(key),pu[key]);
   gl.drawArrays(gl.TRIANGLES,0,3);
+  clean?.free();
   if(target.width!==g.W||target.height!==g.H){target.width=g.W;target.height=g.H;if(target===view)layout()}
   const x=target.getContext('2d');x.drawImage(glc,0,0);
   if(!comparing){drawLens(x,g.W,g.H,t);if(mark&&!(rec&&recTilt))drawMark(x,g.W,g.H)}
@@ -476,7 +543,7 @@ function effective(){
 }
 function nrAmount(w,h){
   if(S.nr===0)return 0;if(S.nr===2)return .85;
-  const dark=clamp((.42-scene.L)/.3,0,1),big=dark>0&&Math.max(w,h)>=3000?.2:0; // bright pictures are left untouched
+  const dark=clamp((.55-scene.L)/.35,0,1),big=dark>0&&Math.max(w,h)>=3000?.2:0; // bright pictures are left untouched
   return S.night&&!videoMode?dark*.9:Math.min(.85,dark*.7+big);
 }
 function autoStyle(){
@@ -486,20 +553,37 @@ function autoStyle(){
   return faceNow()?'DSLR':'Natural';
 }
 const lookNow=()=>S.portrait.style==='Auto'?{...S.portrait,...LOOK,...STYLES[autoStyle()]}:S.portrait;
+// nothing recognised: only a clean blur, no colour or light changes that could show odd shapes
+const drawLook=()=>AI.subject?lookNow():{...lookNow(),bgDark:0,bgLight:0,bgSat:0,bgWarm:0,zoomBlur:0,bokeh:0,light:0,subSat:0,smooth:0};
 
 /* ---------- on-device AI (MediaPipe), loaded only when needed ---------- */
 const AIBASE='https://kezmocam.invalid/ai/';
 const AI={mode:window.Worker?'worker':'main',worker:null,workerOK:false,pending:new Map(),id:0,lib:null,tasks:{},busy:{},ready:{},took:{},failed:false,error:'',
-mask:null,mw:0,mh:0,off:[0,0],ref:null,gen:0,faces:[],seen:0,last:{},ts:0};
+mask:null,mw:0,mh:0,subject:false,miss:0,gen:0,faces:[],seen:0,last:{},ts:0};
 let aimShown={x:.5,y:.5};
 const MODELS={person:['ImageSegmenter','selfie_segmenter.tflite',{runningMode:'VIDEO',outputConfidenceMasks:true,outputCategoryMask:false}],
 fine:['ImageSegmenter','selfie_multiclass_256x256.tflite',{runningMode:'IMAGE',outputConfidenceMasks:true,outputCategoryMask:false}], // sharper hair and edges, used for saved photos
 object:['InteractiveSegmenter','magic_touch.tflite',{outputConfidenceMasks:true,outputCategoryMask:false}],
-face:['FaceLandmarker','face_landmarker.task',{runningMode:'VIDEO',numFaces:2}]};
+face:['FaceLandmarker','face_landmarker.task',{runningMode:'VIDEO',numFaces:2}],
+pose:['PoseLandmarker','pose_landmarker_lite.task',{runningMode:'VIDEO',numPoses:3}], // live pose coach
+poseRef:['PoseLandmarker','pose_landmarker_full.task',{runningMode:'IMAGE',numPoses:4,outputSegmentationMasks:true,minPoseDetectionConfidence:.4}], // imported photo
+things:['ObjectDetector','efficientdet_lite0.tflite',{runningMode:'IMAGE',scoreThreshold:.35,maxResults:10}]};
 // runs one model on one picture (also copied into the worker, so it must not use anything outside itself)
 function infer(task,name,input,ts,point){
   if(name==='face')return {faces:task.detectForVideo(input,ts).faceLandmarks||[]};
+  if(name==='things')return {things:task.detect(input).detections.map(d=>{const b=d.boundingBox,c=d.categories[0];
+    return {name:c.categoryName,score:c.score,x:b.originX/input.width,y:b.originY/input.height,w:b.width/input.width,h:b.height/input.height}})};
   let out=null;
+  if(name==='pose'||name==='poseRef'){
+    const read=r=>{
+      const people=(r.landmarks||[]).map(l=>l.map(p=>[p.x,p.y,p.visibility??1]));let mask=null,w=0,h=0;
+      for(const m of r.segmentationMasks||[]){const d=m.getAsFloat32Array();if(!mask){w=m.width;h=m.height;mask=new Uint8Array(w*h)}
+        for(let i=0;i<mask.length;i++){const v=d[i]*255;if(v>mask[i])mask[i]=v}}
+      out={people,mask,w,h};if(r.close)r.close();
+    };
+    if(name==='pose')read(task.detectForVideo(input,ts));else task.detect(input,read);
+    return out;
+  }
   const done=r=>{
     const list=r.confidenceMasks,fine=name==='fine',m=fine?list[0]:list[list.length-1],data=m.getAsFloat32Array(),w=m.width,h=m.height,mask=new Uint8Array(w*h);
     // multiclass model: the first mask is the background. Tap model: the tapped thing must be the sharp side.
@@ -555,17 +639,50 @@ function setMask(mask,w,h){
   gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,mtex);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,w,h,0,gl.LUMINANCE,gl.UNSIGNED_BYTE,mask);gl.activeTexture(gl.TEXTURE0);
 }
-function takeMask(out,point,smoothing){
-  const {mask,w,h}=out,old=AI.mask&&AI.mw===w&&AI.mh===h?AI.mask:null;let sx=0,sy=0,count=0;
+// Keeps only a solid, clearly recognised subject. Doubtful patches are thrown away, so no odd shapes appear.
+function solid(mask,w,h,point){
+  const n=w*h,label=new Int32Array(n),stack=new Int32Array(n),parts=[];let top=0,mid=0;
+  const push=(j,id)=>{if(!label[j]&&mask[j]>128){label[j]=id;stack[top++]=j}};
+  for(let s=0;s<n;s++){
+    if(mask[s]>60&&mask[s]<=180)mid++;
+    if(label[s]||mask[s]<=128)continue;
+    const id=parts.length+1,part={id,area:0,sure:0};push(s,id);
+    while(top){const i=stack[--top],x=i%w;part.area++;if(mask[i]>200)part.sure++;
+      if(x)push(i-1,id);if(x<w-1)push(i+1,id);if(i>=w)push(i-w,id);if(i<n-w)push(i+w,id)}
+    parts.push(part);
+  }
+  let good=parts.filter(p=>p.area>=n*.006&&p.sure>=p.area*.55&&p.area<n*.9);
+  const largest=good.reduce((a,p)=>Math.max(a,p.area),0);
+  if(point){ // tapped object: exactly one piece, and never "the whole background"
+    const at=label[Math.min(h-1,Math.floor(point.y*h))*w+Math.min(w-1,Math.floor(point.x*w))];
+    const one=good.find(p=>p.id===at)||good.find(p=>p.area===largest);good=one&&one.area<n*.7?[one]:[];
+  }else good=good.filter(p=>p.area>=largest*.2);
+  const area=good.reduce((a,p)=>a+p.area,0);
+  if(area<n*(AI.subject?.01:.02)||mid>area*1.2){mask.fill(0);return false}
+  // keep a thin soft rim around the subject, clear everything else
+  const keep=new Set(good.map(p=>p.id)),far=new Uint8Array(n);
+  for(let i=0;i<n;i++)far[i]=keep.has(label[i])?0:99;
+  for(let i=0;i<n;i++){if(i%w&&far[i-1]+1<far[i])far[i]=far[i-1]+1;if(i>=w&&far[i-w]+1<far[i])far[i]=far[i-w]+1}
+  for(let i=n-1;i>=0;i--){if(i%w<w-1&&far[i+1]+1<far[i])far[i]=far[i+1]+1;if(i<n-w&&far[i+w]+1<far[i])far[i]=far[i+w]+1}
+  for(let i=0;i<n;i++)if(far[i]>7)mask[i]=0;
+  return true;
+}
+// live=true for the running preview. Returns whether a subject was found.
+function takeMask(out,point,live){
+  const {mask,w,h}=out,old=AI.mask&&AI.mw===w&&AI.mh===h?AI.mask:null,found=solid(mask,w,h,point);
+  if(live&&!found&&AI.subject&&old&&++AI.miss<2)return true; // one missed answer: wait before changing
+  AI.miss=0;
+  let sx=0,sy=0,count=0;
   for(let i=0;i<w*h;i++){
-    if(old)mask[i]=mask[i]*(1-smoothing)+old[i]*smoothing;
+    if(live&&found&&AI.subject&&old&&Math.abs(mask[i]-old[i])<70)mask[i]=(mask[i]+old[i])>>1; // steady small flicker, follow real movement at once
     if(mask[i]>127){sx+=i%w;sy+=Math.floor(i/w);count++}
   }
-  setMask(mask,w,h);
-  if(count>w*h*.003){
+  AI.subject=found;setMask(mask,w,h);
+  if(count){
     const cx=Math.floor(sx/count),cy=Math.floor(sy/count),c={x:(cx+.5)/w,y:(cy+.5)/h};aimShown=c;
     if(point&&mask[cy*w+cx]>127)aim={...c}; // follow the object
   }
+  return found;
 }
 function think(src,w,h){
   const now=performance.now(),need=[];
@@ -576,13 +693,13 @@ function think(src,w,h){
     // if the AI has to run on the main thread, leave the camera at least twice the time it takes
     const gap=AI.mode==='main'?Math.max(every,(AI.took[name]||0)*2):every;
     if(AI.busy[name]||now-(AI.last[name]||0)<gap)continue;
-    AI.busy[name]=true;const gen=AI.gen,ref=name==='face'?null:smallGrey(src),began=performance.now();
+    AI.busy[name]=true;const gen=AI.gen,began=performance.now();
     if(!AI.ready[name])say('AI load ho raha hai…');
     ask(name,src,w,h,name==='object'?{...aim}:null).then(out=>{
       if(!AI.ready[name]){AI.ready[name]=true;if($('msg').textContent.startsWith('AI load'))say('')}
       if(gen!==AI.gen||busy)return; // a photo being saved uses its own, finer answer
       if(name==='face'){AI.faces=out.faces;if(out.faces.length)AI.seen=performance.now()}
-      else if(S.portrait.on){takeMask(out,name==='object'?aim:null,name==='person'?.2:0);AI.ref=ref;AI.off=[0,0]}
+      else if(S.portrait.on&&name===(S.portrait.mode?'object':'person'))takeMask(out,name==='object'?{...aim}:null,true);
     }).catch(e=>{
       if(e.message==='retry')return;
       console.warn('AI',name,e);
@@ -591,7 +708,7 @@ function think(src,w,h){
   }
 }
 const retryAI=()=>{if(AI.failed){AI.failed=false;AI.lib=null;AI.tasks={}}forgetAI()};
-const forgetAI=()=>{AI.gen++;AI.mask=null;AI.faces=[];AI.last={};AI.off=[0,0];AI.ref=null;aim={x:.5,y:.5};aimShown={x:.5,y:.5}};
+const forgetAI=()=>{AI.gen++;AI.mask=null;AI.faces=[];AI.last={};AI.subject=false;AI.miss=0;aim={x:.5,y:.5};aimShown={x:.5,y:.5}};
 
 /* ---------- face lenses ---------- */
 const WARPS={'Big Eyes':[['eyes',.17,.42]],'Alien Eyes':[['eyes',.25,.6]],'Big Mouth':[['mouth',.38,.45]],'Funny Nose':[['nose',.28,.55]],'Slim Face':[['jaw',.42,-.2]],'Tiny Face':[['nose',.95,-.4]]};
@@ -686,12 +803,6 @@ function stabilise(){
   }
   steady.prev=grey;
 }
-// between two AI answers, slide the mask along with the moving subject
-function trackMask(){
-  if(!S.portrait.on||!AI.mask||!AI.ref)return;
-  const keep=(x,y)=>AI.mask[Math.floor(y/SH*AI.mh)*AI.mw+Math.floor(x/SW*AI.mw)]>127;
-  const [dx,dy]=shift(AI.ref,smallGrey(video),keep);AI.off=[dx/SW,-dy/SH];
-}
 let lastTime=-1,frames=0;
 function loop(){
   requestAnimationFrame(loop);
@@ -700,7 +811,6 @@ function loop(){
   if(rec&&rec.direct&&frames%4)return; // recording straight from the camera: keep the preview light
   const now=performance.now();if(now-scene.at>350){scene.at=now;analyse(video);if(frames%3===0||!scene.shown)info()}
   if(S.steady&&fresh)stabilise();
-  if(fresh)trackMask();
   think(video,video.videoWidth,video.videoHeight);
   if(S.lens!=='None'&&AI.ready.face){const none=now-AI.seen>1500;if(none)say('Chehra camera ke saamne lao');else if($('msg').textContent.startsWith('Chehra'))say('')}
   render(video,video.videoWidth,video.videoHeight);
@@ -752,7 +862,7 @@ function applyHardware(){
 function info(){
   if(!track)return;const s=track.getSettings();scene.shown=scene.seen;
   $('info').textContent=['v'+APP_VERSION,videoMode?`${s.width}×${s.height} • ${Math.round(s.frameRate||0)} fps`:S.night?'Night':S.hdPhoto&&!hdBroken&&window.ImageCapture?'HD photo':`${s.width}×${s.height}`,
-    rec&&rec.direct?'Direct (poori quality)':S.preset,S.aiFilter?'AI '+sceneName()[0]:'',S.steady?'Steady':'',S.portrait.on?(S.portrait.style==='Auto'?'Auto: '+autoStyle():S.portrait.style):'',
+    rec&&rec.direct?'Direct (poori quality)':S.preset,S.aiFilter?'AI '+sceneName()[0]:'',S.steady?'Steady':'',S.portrait.on?(AI.mask&&!AI.subject?'Subject nahi: sirf blur':S.portrait.style==='Auto'?'Auto: '+autoStyle():S.portrait.style):'',
     S.lens!=='None'?S.lens:'',S.ui.rotate&&tilt?'↻ aadi photo':''].filter(Boolean).join(' • ');
 }
 $('torch').onclick=async()=>{
@@ -824,7 +934,7 @@ async function stackFrames(count=10){ // Night mode: average several frames, whi
 async function photo(){
   if(busy||!stream)return;
   busy=true;const night=S.night;say(night?'Night photo… phone bilkul seedha pakdo':'Photo le raha hai… phone seedha rakho');click();
-  const turn=S.ui.rotate?tilt:0,keep={mask:AI.mask,mw:AI.mw,mh:AI.mh,faces:AI.faces,aim:aimShown};
+  const turn=S.ui.rotate?tilt:0,keep={mask:AI.mask,mw:AI.mw,mh:AI.mh,faces:AI.faces,aim:aimShown,subject:AI.subject};
   let changed=false;
   try{
     const vw=video.videoWidth,vh=video.videoHeight,g=geometry(vw,vh,0,1e9),ratio=g.W/g.H;
@@ -834,18 +944,22 @@ async function photo(){
     if(src){ // run the AI again on the saved picture itself, so edges line up
       try{
         const jobs=[];
-        if(S.portrait.on&&!AI.failed&&S.portrait.mode===0)jobs.push(wait(ask('fine',src,src.width,src.height),12000).catch(()=>wait(ask('person',src,src.width,src.height),6000)).then(o=>{changed=true;takeMask(o,null,0)}));
-        if(S.portrait.on&&!AI.failed&&S.portrait.mode===1)jobs.push(wait(ask('object',src,src.width,src.height,{...aim}),8000).then(o=>{changed=true;takeMask(o,null,0)}));
+        if(S.portrait.on&&!AI.failed&&S.portrait.mode===0)jobs.push((async()=>{
+          const first=await wait(ask('fine',src,src.width,src.height),12000).catch(()=>null);
+          changed=true;
+          if(!first||!takeMask(first,null,false))takeMask(await wait(ask('person',src,src.width,src.height),6000),null,false);
+        })());
+        if(S.portrait.on&&!AI.failed&&S.portrait.mode===1)jobs.push(wait(ask('object',src,src.width,src.height,{...aim}),8000).then(o=>{changed=true;takeMask(o,{...aim},false)}));
         if(S.lens!=='None')jobs.push(wait(ask('face',src,src.width,src.height),8000).then(o=>{changed=true;AI.faces=o.faces}));
         await Promise.all(jobs);
-      }catch(e){console.warn('still AI',e);src=null;if(changed&&keep.mask){setMask(keep.mask,keep.mw,keep.mh);AI.faces=keep.faces}}
+      }catch(e){console.warn('still AI',e);src=null;if(changed&&keep.mask){setMask(keep.mask,keep.mw,keep.mh);AI.faces=keep.faces;AI.subject=keep.subject}}
     }
     let out=el('canvas');
     render(src||video,src?src.width:vw,src?src.height:vh,{target:out,still:true,ratio,mark:false});
     out=turn?turned(out,turn):out;drawMark(out.getContext('2d'),out.width,out.height);
-    await new Promise(done=>out.toBlob(b=>{if(b)queue(b,'Kezmo_'+Date.now()+'.jpg');else say('Photo nahi bani');done()},'image/jpeg',S.jpeg/100));
+    await new Promise(done=>out.toBlob(b=>{if(b){say(`Photo ${out.width}×${out.height} ✓`);queue(b,'Kezmo_'+Date.now()+'.jpg')}else say('Photo nahi bani');done()},'image/jpeg',S.jpeg/100));
   }catch(e){console.warn(e);say('Photo nahi bani')}
-  if(changed){if(keep.mask)setMask(keep.mask,keep.mw,keep.mh);else AI.mask=null;AI.faces=keep.faces;aimShown=keep.aim;AI.last={}}
+  if(changed){if(keep.mask)setMask(keep.mask,keep.mw,keep.mh);else AI.mask=null;AI.faces=keep.faces;aimShown=keep.aim;AI.subject=keep.subject;AI.last={}}
   busy=false;
   if(hdBroken&&openedRes!==camRes())start();else applyHardware();
 }
@@ -912,6 +1026,7 @@ Portrait:'<circle cx="12" cy="9" r="4"/><path d="M4.500 21c1-4.500 4-6 7.500-6s6
 Camera:'<circle cx="12" cy="12" r="9"/><path d="m12 3 4 7M21 12h-8M16.500 19.800l-4-7M12 21l-4-7M3 12h8M7.500 4.200l4 7"/>',
 eye:'<path d="M2 12s3.500-6.500 10-6.500S22 12 22 12s-3.500 6.500-10 6.500S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
 close:'<path d="M6 6l12 12M18 6 6 18"/>',
+pose:'<circle cx="12" cy="4.500" r="2"/><path d="M12 8v7M12 15l-4 6M12 15l4 6M12 9.500 7 12M12 9.500l5-1.500 2-4"/>',
 grid:'<path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>',level:'<circle cx="12" cy="12" r="6"/><path d="M2 12h20"/>',mark:'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 15h6"/>',
 sound:'<path d="M4 9v6h4l5 4V5L8 9zM16.500 8.500q3 3.500 0 7"/>',hd:'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 9v6M11 9v6M7 12h4M14 9v6h1q3-0 3-3t-3-3z"/>',
 ai:'<path d="M11 4l1.800 5.200L18 11l-5.200 1.800L11 18l-1.800-5.200L4 11l5.200-1.800zM19 3v4M17 5h4"/>',noise:'<path d="M5 5h.1M12 5h.1M19 5h.1M8.500 9h.1M15.500 9h.1M5 13h.1M12 13h.1M19 13h.1M4 19q4-5 8 0t8 0"/>',
@@ -1016,6 +1131,7 @@ function openTab(name){
   for(const b of $('tabs').children)b.className=b.textContent===name?'on':'';panel();
 }
 for(const name of TABS)$('tabs').append(el('button',{textContent:name,onclick:()=>openTab(name)}));
+$('side').append(iconButton('pose','Poses',{onclick:()=>openPoses()}));
 for(const name of ['Portrait','Lens','Filters'])$('side').append(iconButton(name,name,{onclick:()=>openTab(name)}));
 const compare=iconButton('eye','Original dekhne ke liye dabaye rakho',{id:'compare'});document.body.insertBefore(compare,$('dock'));
 let armed=0;
@@ -1140,18 +1256,21 @@ function setThumb(blob){
   $('thumb').style.backgroundImage=`url(${thumbURL})`;
 }
 $('thumb').onclick=()=>window.Android?.openLast?.();
-window.volumeShot=()=>{if($('more').hidden)$('shot').onclick()};
+window.volumeShot=()=>{if($('more').hidden&&$('poses').hidden&&$('photo').hidden)$('shot').onclick()};
 window.backPressed=()=>{
-  if(!$('more').hidden){$('more').hidden=true;return true}
+  if(!$('more').hidden){$('more').hidden=true;drawGuide();return true}
+  if(!$('photo').hidden){closePhoto();return true}
+  if(!$('poses').hidden){closePoses();return true}
   if(!$('sheet').hidden){showSheet(false);return true}
   if(!$('quick').hidden){$('quick').hidden=true;return true}
+  if(guide){closeGuide();return true}
   return false;
 };
 function shown(){ // where the picture actually sits inside the stage
   const s=$('stage').getBoundingClientRect(),k=Math.min(s.width/view.width,s.height/view.height),w=view.width*k,h=view.height*k;
   return {s,x:(s.width-w)/2,y:0,w,h};
 }
-function layout(){const r=shown();Object.assign($('grid').style,{left:r.x+'px',top:r.y+'px',width:r.w+'px',height:r.h+'px'});info()}
+function layout(){const r=shown();Object.assign($('grid').style,{left:r.x+'px',top:r.y+'px',width:r.w+'px',height:r.h+'px'});info();drawGuide()}
 addEventListener('resize',layout);
 let pinch=null;const fingers=new Map();
 const dist=()=>{const [a,b]=[...fingers.values()];return Math.hypot(a.x-b.x,a.y-b.y)};
@@ -1165,11 +1284,15 @@ $('stage').addEventListener('pointerdown',e=>{
   Object.assign($('ring').style,{left:e.clientX-r.s.left+'px',top:e.clientY-r.s.top+'px',opacity:1});setTimeout(()=>$('ring').style.opacity=0,900);
   // screen position -> position in the camera picture (this undoes crop, mirror and steady shot)
   const u=.5+(x-.5)*lastT.scale[0]+lastT.off[0],v=.5+(.5-y)*lastT.scale[1]+lastT.off[1],spot={x:clamp(u,0,1),y:clamp(1-v,0,1)};
-  if(S.portrait.on){S.portrait.x=x;S.portrait.y=1-y;if(S.portrait.mode===1){AI.gen++;AI.mask=null;AI.ref=null;aim={...spot};AI.last.object=0}persist()}
+  if(S.portrait.on){S.portrait.x=x;S.portrait.y=1-y;if(S.portrait.mode===1){AI.gen++;AI.mask=null;AI.subject=false;aim={...spot};AI.last.object=0}persist()}
   point=spot;applyHardware();
 });
 $('stage').addEventListener('pointermove',e=>{
-  if(!fingers.has(e.pointerId))return;fingers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(!fingers.has(e.pointerId))return;const was=fingers.get(e.pointerId);fingers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(guide&&fingers.size===1&&!pinch){ // drag the pose outline
+    const {W,H}=frameSize(),a=(S.ui.rotate?tilt:0)*Math.PI/180,mx=e.clientX-was.x,my=e.clientY-was.y;
+    guide.dx=clamp(guide.dx+(mx*Math.cos(a)-my*Math.sin(a))/W,-.8,.8);guide.dy=clamp(guide.dy+(mx*Math.sin(a)+my*Math.cos(a))/H,-.8,.8);drawGuide();
+  }
   const z=caps().zoom;
   if(pinch&&fingers.size===2&&z){const x=clamp(pinch.z*dist()/pinch.d,z.min,z.max);S.hw[facing].zoom=x;persist();applyHardware();zoomBar();say('Zoom '+x.toFixed(1)+'×')}
 });
@@ -1180,5 +1303,380 @@ $('compare').oncontextmenu=e=>e.preventDefault();
 $('perm').onclick=()=>Android.openSettings();
 window.appPause=()=>{paused=true;cancelTimer();const r=rec;if(r){r.addEventListener('stop',stop);stopRec()}else stop()};
 window.appResume=()=>{if(paused){paused=false;start()}};
+/* ---------- poses: library, guide on the camera, live coach, copy a pose from a photo ---------- */
+// A figure is described by angles in degrees: 0 = down, 90 = right, -90 = left, 180 = up. "L/R" = left/right as seen on screen.
+// aL/aR: [upper arm, forearm]   lL/lR: [thigh, shin, thigh length, shin length]   d: how far the hips drop   y: lift
+const fig=(x=0,o={})=>({x,...o});
+const dir=a=>[Math.sin(a*Math.PI/180),Math.cos(a*Math.PI/180)];
+const JOINTS=['head','ls','rs','le','re','lw','rw','lh','rh','lk','rk','la','ra'];
+function skeleton(f){
+  const lean=(f.l||0)*Math.PI/180,hip=[f.x,-46+(f.d||0)-(f.y||0)],up=(a,n)=>[Math.sin(a)*n,-Math.cos(a)*n],add=(p,q)=>[p[0]+q[0],p[1]+q[1]];
+  const sh=add(hip,up(lean,28)),across=[Math.cos(lean)*10,Math.sin(lean)*10];
+  const j={head:add(sh,up(lean+(f.h||0)*Math.PI/180,13)),ls:[sh[0]-across[0],sh[1]-across[1]],rs:add(sh,across),lh:[hip[0]-6,hip[1]],rh:[hip[0]+6,hip[1]]};
+  const limb=(from,angles,a,b)=>{const [u,l,ku=1,kl=1]=angles,d1=dir(u),d2=dir(l),mid=add(j[from],[d1[0]*a*ku,d1[1]*a*ku]);return [mid,add(mid,[d2[0]*b*kl,d2[1]*b*kl])]};
+  [j.le,j.lw]=limb('ls',f.aL||[-9,-4],16,15);[j.re,j.rw]=limb('rs',f.aR||[9,4],16,15);
+  [j.lk,j.la]=limb('lh',f.lL||[-4,-2],23,23);[j.rk,j.ra]=limb('rh',f.lR||[4,2],23,23);
+  return j;
+}
+// props show where the wall, chair or steps should be
+const WALL=x=>[[[x,-100],[x,0]]],RAIL=[[[-34,-47],[34,-47]],[[-28,-47],[-28,0]],[[28,-47],[28,0]]];
+const CHAIR=(x=0)=>[[[x-15,-24],[x+13,-24]],[[x+13,-24],[x+16,-58]],[[x-13,-24],[x-15,0]],[[x+11,-24],[x+13,0]]];
+const BENCH=[[[-34,-24],[34,-24]],[[-34,-42],[34,-42]],[[-30,-24],[-30,0]],[[30,-24],[30,0]]];
+const STEPS=[[[-40,0],[-12,0],[-12,-12],[8,-12],[8,-24],[28,-24],[28,-36],[44,-36]]];
+const LEDGE=[[[-36,-30],[36,-30]],[[-36,-30],[-36,0]]],TRUNK=x=>[[[x,0],[x+2,-105]],[[x+11,0],[x+9,-105]]];
+const BIKE=[[[8,-14],[20,-30],[34,-30],[44,-14],[26,-14],[20,-30]],[[34,-30],[32,-38],[27,-38]]];
+const WHEELS=[[8,-14,13],[44,-14,13]];
+const SIT={d:22,lL:[-62,-3,.55,1],lR:[40,3,.55,1]};
+const FLOOR={d:40,lL:[-86,76,.8,.85],lR:[86,-76,.8,.85]};
+const POSES=[];
+// groups get a little breathing space so every body can be read
+const pose=(kind,name,tags,tip,figs,props=[],wheels=[],space=kind==='triple'?1.14:1)=>POSES.push({kind,name,tags:tags.split(' '),tip,figs:figs.map(f=>({...f,x:f.x*space})),props,wheels});
+// ---- single
+pose('single','Haath jeb me','road monument college any','Ek kandha halka jhukao, haath jeb me, thoda side me dekho',[fig(0,{l:4,aL:[-22,18],aR:[22,-18],lR:[16,6]})]);
+pose('single','Dono haath khule','khet pahad phool paani any','Dono haath poore failao, chehra halka upar',[fig(0,{h:-8,aL:[-98,-104],aR:[98,104],lL:[-10,-7],lR:[10,7]})]);
+pose('single','Ek haath aasman','pahad chhat paani khet','Ek haath seedha upar, doosra kamar par',[fig(0,{l:-4,aR:[158,170],aL:[-48,38]})]);
+pose('single','Jeet ki khushi','pahad college chhat','Dono haath V banakar upar, khul kar hanso',[fig(0,{aL:[-135,-155],aR:[135,155],lL:[-14,-10],lR:[14,10]})]);
+pose('single','Chalte hue','road khet monument paani college','Dheere chalo, aage wale pair par wazan, camera se thoda hatkar dekho',[fig(0,{l:3,aL:[24,10],aR:[-14,-24],lL:[-24,-14],lR:[18,34]})]);
+pose('single','Deewar se tek','wall road ghar college','Deewar se kandha lagao, ek pair doosre ke aage',[fig(6,{l:13,aL:[-24,16],aR:[26,8],lL:[-6,-2],lR:[-24,-22]})],WALL(26));
+pose('single','Deewar par pair','wall road college','Peeth deewar se, ek pair mod kar deewar par',[fig(0,{aL:[-20,12],aR:[20,-12],lL:[-3,-1],lR:[34,-42]})],WALL(24));
+pose('single','Haath bandhe','wall college ghar road any','Haath seene par baandho, kandhe seedhe, halki muskaan',[fig(0,{aL:[-18,82],aR:[18,-82],lL:[-12,-8],lR:[12,8]})]);
+pose('single','Kursi par aaram','chair cafe ghar garden','Kursi par baitho, kohni ghutne par, thoda aage jhuko',[fig(0,{...SIT,l:-6,aL:[-28,30],aR:[20,-30]})],CHAIR());
+pose('single','Pair par pair','chair cafe ghar','Ek pair doosre par chadhao, peeth seedhi',[fig(0,{d:22,lL:[-70,8,.65,1],lR:[-58,-34,.75,.9],aL:[-12,36],aR:[22,-40]})],CHAIR());
+pose('single','Thodi par haath','cafe chair ghar','Thodi ko haath par tikao, camera ki taraf dekho',[fig(0,{...SIT,l:-5,h:12,aR:[34,-158],aL:[-14,70]})],CHAIR());
+pose('single','Seedhi par baithe','stairs monument college ghar','Seedhi par baitho, ek pair aage, ek haath ghutne par',[fig(0,{d:22,lL:[-76,-8,.75,1],lR:[52,14,.85,1],aL:[-34,10],aR:[30,-34],l:-6})],STEPS);
+pose('single','Seedhi chadhte','stairs monument','Ek pair upar wali seedhi par, mud kar camera dekho',[fig(-12,{l:5,lR:[48,6],aR:[26,-20],aL:[-14,-6]})],STEPS);
+pose('single','Zameen par aaram','khet phool ghar paani garden','Palthi maar kar baitho, haath ghutnon par',[fig(0,{...FLOOR,aL:[-30,-18],aR:[30,18]})]);
+pose('single','Ghutne mod kar','road khet wall college','Neeche baitho, kohniyan ghutnon par, seedha camera dekho',[fig(0,{d:24,lL:[-62,16],lR:[62,-16],aL:[-34,34],aR:[34,-34]})]);
+pose('single','Baal sawarte','phool paani garden khet any','Ek haath baalon me, chehra halka jhuka',[fig(0,{l:-5,h:10,aR:[124,-146],aL:[-14,-6],lL:[8,4]})]);
+pose('single','Kamar par haath','monument wedding any ghar','Ek haath kamar par, ek pair halka aage',[fig(0,{l:6,aL:[-52,42],aR:[12,6],lR:[20,8]})]);
+pose('single','Railing par kohni','chhat paani cafe pahad','Railing par kohni tikao, door dekho',[fig(0,{l:8,aL:[-46,42],aR:[40,-10],lR:[-18,-14]})],RAIL);
+pose('single','Kinare par baithe','chhat wall paani','Mundher par baitho, haath peeche tikao (sirf neechi aur surakshit jagah par)',[fig(0,{d:16,l:-8,aL:[-32,-26],aR:[32,26],lL:[-30,-4,.7,1],lR:[18,6,.7,1]})],LEDGE);
+pose('single','Door nihaarna','pahad paani chhat khet','Haath se aankhon par chhaon, door dekho',[fig(0,{l:5,h:8,aR:[112,-122],aL:[-46,36]})]);
+pose('single','Ped ke sahare','ped garden phool khet','Tane se halka tiko, ek pair mod lo',[fig(2,{l:11,aR:[40,10],aL:[-20,14],lR:[-26,-18]})],TRUNK(24));
+pose('single','Bike ke saath','bike road','Bike par halka tiko, haath bandhe ya seat par',[fig(-8,{l:12,aR:[58,34],aL:[-18,14],lR:[-20,-16]})],BIKE,WHEELS);
+pose('single','Monument ko pakadna','monument','Haath upar aise rakho jaise imarat ki choti pakdi ho; photo wala haath se choti milaye',[fig(-16,{l:-3,aR:[118,150],aL:[-46,36]})]);
+pose('single','Khushi ki chhalang','pahad paani college khet road','Koodo aur haath upar, photo wala chhalang ke beech click kare',[fig(0,{y:14,aL:[-122,-146],aR:[122,146],lL:[-38,8],lR:[38,-8]})]);
+// ---- couple
+pose('couple','Haath pakad kar','any monument khet road','Paas khade ho, haath pakdo, ek doosre ko dekho',[fig(-15,{l:3,h:8,aR:[26,20]}),fig(15,{l:-3,h:-8,aL:[-26,-20]})]);
+pose('couple','Side hug','any ghar phool garden wedding','Ek ka haath doosre ki kamar par, sar paas lao',[fig(-9,{l:5,h:12,aR:[48,86]}),fig(9,{l:-5,h:-12,aL:[-48,-86]})]);
+pose('couple','Khule haath (peeche se)','pahad paani chhat khet','Aage wala haath failaye, peeche wala sath me haath pakde',[fig(-2,{aL:[-96,-100],aR:[96,100]}),fig(7,{l:-4,aL:[-90,-96,1.1,1],aR:[90,96,1.1,1],lL:[8,4],lR:[14,10]})],RAIL);
+pose('couple','Saath chalna','road khet monument paani','Haath pakad kar dheere chalo, hanste hue',[fig(-15,{aR:[24,18],lL:[-20,-12],lR:[12,26]}),fig(15,{aL:[-24,-18],lL:[-12,-26],lR:[20,12]})]);
+pose('couple','Ghutne par izhaar','phool monument wedding garden pahad','Ek ghutne par baith kar phool ya haath badhao, doosra haath muh par',[fig(-20,{d:22,lL:[-6,-78,.9,.9],lR:[78,2,.8,1],aR:[78,104]}),fig(20,{h:-10,aL:[-70,-96],aR:[40,-140]})]);
+pose('couple','Peeth se peeth','wall road college','Peeth jodo, haath baandho, camera dekho',[fig(-8,{l:7,aL:[-18,82],aR:[18,-82],lL:[-14,-8]}),fig(8,{l:-7,aL:[-18,82],aR:[18,-82],lR:[14,8]})]);
+pose('couple','Bench par saath','chair cafe ped garden ghar','Paas baitho, ek ka sar doosre ke kandhe par',[fig(-9,{...SIT,l:8,h:22,aR:[30,60]}),fig(11,{...SIT,h:-6,aL:[-40,-70]})],BENCH);
+pose('couple','Maatha milakar','khet phool wedding paani','Aamne saamne, maatha halka milao, aankhein band',[fig(-12,{l:9,h:14,aR:[62,96]}),fig(12,{l:-9,h:-14,aL:[-62,-96]})]);
+pose('couple','Ghoom jao','khet wedding chhat road','Ek haath upar pakdo, doosra ghoome',[fig(-18,{aR:[126,150]}),fig(16,{l:6,aL:[-134,-150],aR:[70,96],lL:[10,2],lR:[26,16]})]);
+pose('couple','Seedhi par saath','stairs monument','Ek upar wali seedhi par baithe, doosra neeche, kareeb',[fig(8,{d:12,lL:[-60,-6,.7,1],lR:[44,8,.7,1],aL:[-50,-40]}),fig(-18,{d:24,lL:[-76,-8,.75,1],lR:[56,12,.8,1],h:10,aR:[60,80]})],STEPS);
+// ---- double (friends)
+pose('double','High five','any college road khet','Beech me haath milao, dono hanso',[fig(-21,{aR:[112,146],aL:[-30,20]}),fig(21,{aL:[-112,-146],aR:[30,-20]})]);
+pose('double','Kandhe par haath','any road college monument','Ek doosre ke kandhe par haath, bindaas khado',[fig(-11,{aR:[84,100],aL:[-46,36]}),fig(11,{aL:[-84,-100],aR:[46,-36]})]);
+pose('double','Peeth se peeth swag','wall college road','Peeth jodo, haath baandho',[fig(-9,{l:8,aL:[-18,82],aR:[18,-82],lL:[-18,-12]}),fig(9,{l:-8,aL:[-18,82],aR:[18,-82],lR:[18,12]})]);
+pose('double','Saath chhalang','pahad paani khet chhat','3 ginkar saath koodo',[fig(-24,{y:13,aL:[-124,-150],aR:[116,140],lL:[-34,10],lR:[30,-12]}),fig(24,{y:13,aL:[-116,-140],aR:[124,150],lL:[-30,12],lR:[34,-10]})]);
+pose('double','Ek baitha ek khada','chair cafe stairs ghar','Ek kursi par, doosra peeche kandhe par haath rakhe',[fig(-9,{...SIT,aL:[-30,30]}),fig(19,{l:-5,aL:[-70,-78],aR:[30,-24]})],CHAIR(-9));
+pose('double','Chalte chalte baatein','road monument garden college','Saath chalo, ek doosre ko dekh kar hanso',[fig(-17,{h:10,aR:[44,100],lL:[-22,-12],lR:[14,30]}),fig(17,{h:-10,aL:[-18,-8],lL:[-14,-30],lR:[22,12]})]);
+pose('double','Idhar dekho','any pahad monument','Ek door ishara kare, doosra usi taraf dekhe',[fig(-15,{h:-6,aL:[-122,-128]}),fig(13,{l:-4,h:-12,aL:[-60,40],aR:[24,-12]})]);
+pose('double','Zameen par yaari','khet phool ghar garden paani','Dono neeche baitho, kandhe mila lo',[fig(-19,{...FLOOR,l:7,aL:[-34,-20],aR:[76,90]}),fig(19,{...FLOOR,l:-7,aL:[-76,-90],aR:[34,20]})]);
+// ---- triple
+pose('triple','Teen yaar kandhe se kandha','any road college monument','Beech wala dono ke kandhon par haath rakhe',[fig(-22,{l:5,aL:[-46,36]}),fig(0,{aL:[-86,-100],aR:[86,100]}),fig(22,{l:-5,aR:[46,-36]})]);
+pose('triple','Teeno chhalang','pahad paani khet chhat college','3 ginkar teeno saath koodo',[-34,0,34].map((x,i)=>fig(x,{y:12+(i===1?6:0),aL:[-126,-150],aR:[126,150],lL:[-30,10],lR:[30,-10]})));
+pose('triple','Beech wala baitha','chair cafe ghar stairs','Ek kursi par beech me, do dono taraf khade',[fig(-25,{l:6,aR:[62,70]}),fig(0,{...SIT,aL:[-30,30],aR:[30,-30]}),fig(25,{l:-6,aL:[-62,-70]})],CHAIR(0));
+pose('triple','Seedhi ke teen level','stairs monument college','Teeno alag seedhi par baitho',[fig(-28,{d:26,lL:[-70,-6,.7,1],lR:[40,6,.7,1]}),fig(0,{d:14,lL:[-40,-4,.7,1],lR:[40,4,.7,1],aL:[-30,24],aR:[30,-24]}),fig(26,{d:2,lL:[-8,-4],lR:[22,4]})],STEPS);
+pose('triple','Hero walk','road college monument khet','Teeno ek line me camera ki taraf chalo',[fig(-27,{aL:[-20,-8],lL:[-20,-10],lR:[10,24]}),fig(0,{aL:[-26,20],aR:[26,-20],lL:[-12,-4],lR:[12,4]}),fig(27,{aR:[20,8],lL:[-10,-24],lR:[20,10]})]);
+pose('triple','Deewar par teen style','wall college road','Teeno alag style: ek tika, ek haath bandhe, ek pair mod kar',[fig(-28,{l:-11,lL:[24,18],aL:[-30,-10]}),fig(0,{aL:[-18,82],aR:[18,-82]}),fig(28,{lR:[32,-40],aL:[-22,18],aR:[22,-18]})],WALL(46));
+pose('triple','Beech me khushi','any pahad garden phool','Beech wala haath failaye, dono uski taraf ishara karein',[fig(-34,{l:6,aR:[100,112]}),fig(0,{aL:[-112,-130],aR:[112,130]}),fig(34,{l:-6,aL:[-100,-112]})]);
+pose('triple','Neeche teeno','khet phool ghar paani garden','Teeno paas paas baitho',[-31,0,31].map((x,i)=>fig(x,{...FLOOR,d:i===1?30:40,l:(1-i)*7,aL:[-30,-18],aR:[30,18]})));
+
+const PLACES=[['khet','Khet / maidan','khet field maidan ground grass ghaas farm sarso'],['chhat','Chhat','chhat chat rooftop roof terrace balcony'],['wall','Deewar','wall deewar diwar divar graffiti'],
+['chair','Kursi / bench','chair kursi bench sofa baith'],['stairs','Seedhi','stairs seedhi sidi siddi steps staircase'],['pahad','Pahad','pahad pahaad mountain hill valley ghati trek'],['paani','Beach / paani','beach paani pani water sea samundar river nadi lake jheel waterfall jharna'],
+['road','Road / street','road sadak street gali highway city shahar'],['ped','Ped / jungle','ped tree jungle forest van'],['phool','Phool / garden','phool flower garden bagicha park bagh'],['ghar','Ghar / room','ghar home room kamra bed indoor'],
+['cafe','Cafe','cafe restaurant hotel coffee table chai'],['bike','Bike / car','bike motorcycle car gaadi gadi scooter cycle'],['monument','Monument','monument taj mahal mahel kila fort mandir temple masjid church gate imarat'],['wedding','Shaadi','shaadi shadi wedding party function sagai'],['college','College','college school campus library graduation']];
+const KINDS=[['single','Single',1],['couple','Couple',2],['double','Double',2],['triple','Triple',3]];
+function placesFor(text){
+  const words=text.toLowerCase().split(/[\s,/]+/).filter(w=>w.length>2&&!['par','pe','ke','ki','ka','wala','wali','top'].includes(w));
+  return PLACES.filter(p=>p[2].split(' ').some(s=>words.some(w=>s.startsWith(w)||(s.length>4&&w.startsWith(s))))).map(p=>p[0]);
+}
+// poses for the chosen number of people: ones made for the place first, then ones that work anywhere
+function findPoses(kind,text,places){
+  const mine=POSES.filter(p=>p.kind===kind),q=text.trim().toLowerCase();
+  const wanted=places||(q?placesFor(q):[]),named=q?mine.filter(p=>p.name.toLowerCase().includes(q)):[];
+  if(!wanted.length&&!named.length)return {list:mine,matched:!q&&!places?.length};
+  const here=mine.filter(p=>wanted.some(w=>p.tags.includes(w))),anywhere=mine.filter(p=>p.tags.includes('any'));
+  return {list:[...new Set([...named,...here,...anywhere])],matched:true};
+}
+
+/* drawing: only the outer line of each body, like a hand drawn guide */
+function bodyPath(x,j,seen,extra){
+  const line=(a,b,w)=>{if(!seen(a)||!seen(b))return;x.lineWidth=w+extra;x.beginPath();x.moveTo(...j[a]);x.lineTo(...j[b]);x.stroke()};
+  const u=Math.hypot((j.ls[0]+j.rs[0]-j.lh[0]-j.rh[0])/2,(j.ls[1]+j.rs[1]-j.lh[1]-j.rh[1])/2)/28||1; // size of this body
+  x.lineCap=x.lineJoin='round';x.strokeStyle=x.fillStyle='#fff';
+  const W=(a,b,w)=>line(a,b,w*u);
+  W('ls','le',7);W('le','lw',5.5);W('rs','re',7);W('re','rw',5.5);W('lh','lk',9.5);W('lk','la',7);W('rh','rk',9.5);W('rk','ra',7);
+  if(seen('ls')&&seen('rs')){
+    x.beginPath();x.moveTo(...j.ls);x.lineTo(...j.rs);if(seen('lh')&&seen('rh')){x.lineTo(...j.rh);x.lineTo(...j.lh)}x.closePath();x.lineWidth=7*u+extra;x.fill();x.stroke();
+    if(seen('head')){x.lineWidth=5*u+extra;x.beginPath();x.moveTo((j.ls[0]+j.rs[0])/2,(j.ls[1]+j.rs[1])/2);x.lineTo(...j.head);x.stroke()}
+  }
+  if(seen('head')){x.beginPath();x.arc(j.head[0],j.head[1],7.2*u+extra/2,0,7);x.fill()}
+}
+const inkCanvas=el('canvas');
+function ink(target,paint,color){ // draw on a spare canvas, then put it over the target
+  const W=target.canvas.width,H=target.canvas.height;if(inkCanvas.width!==W||inkCanvas.height!==H){inkCanvas.width=W;inkCanvas.height=H}
+  const x=inkCanvas.getContext('2d');x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-over';x.clearRect(0,0,W,H);
+  x.setTransform(target.getTransform());paint(x);
+  x.setTransform(1,0,0,1,0,0);x.globalCompositeOperation='source-in';x.fillStyle=color;x.fillRect(0,0,W,H);
+  target.save();target.setTransform(1,0,0,1,0,0);target.shadowColor='#000b';target.shadowBlur=5;target.drawImage(inkCanvas,0,0);target.restore();
+}
+function drawPose(x,figures,{color='#fff',width=2.2,props=[],wheels=[]}={}){ // x is already scaled to pose units
+  const s=Math.hypot(x.getTransform().a,x.getTransform().b),thin=width/s;
+  if(props.length||wheels.length){x.save();x.strokeStyle=color;x.globalAlpha=.65;x.lineWidth=thin;x.setLineDash([5/s,5/s]);x.lineCap='round';
+    for(const line of props){x.beginPath();line.forEach((p,i)=>i?x.lineTo(...p):x.moveTo(...p));x.stroke()}
+    for(const [a,b,r] of wheels){x.beginPath();x.arc(a,b,r,0,7);x.stroke()}x.restore()}
+  ink(x,c=>{for(const f of figures){c.globalCompositeOperation='source-over';bodyPath(c,f.j,f.seen,thin*2);c.globalCompositeOperation='destination-out';bodyPath(c,f.j,f.seen,0)}},color);
+}
+const all=()=>true;
+const libraryFigures=p=>p.figs.map(f=>({j:skeleton(f),seen:all}));
+function boxOf(figures,props=[],wheels=[]){
+  const pts=[];
+  for(const f of figures)for(const k of JOINTS)if(f.seen(k)){const r=k==='head'?9:5;pts.push([f.j[k][0]-r,f.j[k][1]-r],[f.j[k][0]+r,f.j[k][1]+r])}
+  for(const l of props)pts.push(...l);for(const [a,b,r] of wheels)pts.push([a-r,b-r],[a+r,b+r]);
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]),x=Math.min(...xs),y=Math.min(...ys);
+  return {x,y,w:Math.max(...xs)-x||1,h:Math.max(...ys)-y||1};
+}
+
+/* the guide shown over the camera (never saved into the photo) */
+let guide=null,coachOn=true,coachBusy=false,coachAt=0,guideGood=false;
+function usePose(p,list){
+  const figures=libraryFigures(p);
+  guide={name:p.name,tip:p.tip,figures,props:p.props,wheels:p.wheels,box:boxOf(figures,p.props,p.wheels),people:p.figs.length,list:list||[p],pose:p,dx:0,dy:0,size:1,mirror:false,ref:null};
+  openGuide();
+}
+function openGuide(){$('poses').hidden=$('photo').hidden=true;showSheet(false);$('quick').hidden=true;document.body.classList.add('guiding');guideGood=false;guideBar(guide.tip);drawGuide()}
+function closeGuide(){guide=null;document.body.classList.remove('guiding');$('guidebar').hidden=true;$('guide').hidden=true}
+// where the guide goes inside an upright frame of size W x H (pixels)
+function placement(W,H){
+  const b=guide.box;let k,cx,cy;
+  if(guide.ref){ // keep the person as large, and in the same spot, as in the imported photo
+    const r=guide.ref;k=H/r.h;k=Math.min(k,W*.98/b.w,H*.98/b.h);
+    cx=W/2+(b.x+b.w/2-r.w/2)*k;cy=H/2+(b.y+b.h/2-r.h/2)*k;
+    cx=clamp(cx,b.w*k/2,W-b.w*k/2);cy=clamp(cy,b.h*k/2,H-b.h*k/2);
+  }else{k=Math.min(H*.7/Math.max(b.h,70),W*.92/b.w);cx=W/2;cy=H*.95-b.h*k/2}
+  k*=guide.size;return {k,cx:cx+guide.dx*W,cy:cy+guide.dy*H,mid:[b.x+b.w/2,b.y+b.h/2]};
+}
+const frameSize=()=>{const r=shown(),side=Math.abs(tilt)===90&&S.ui.rotate;return {r,turn:S.ui.rotate?tilt:0,W:side?r.h:r.w,H:side?r.w:r.h}};
+function drawGuide(){
+  const c=$('guide');c.hidden=!guide||!$('more').hidden;if(!guide)return;
+  const {r,turn,W,H}=frameSize(),ratio=Math.min(2,devicePixelRatio||1);
+  Object.assign(c.style,{left:r.x+'px',top:r.y+'px',width:r.w+'px',height:r.h+'px'});
+  c.width=Math.round(r.w*ratio);c.height=Math.round(r.h*ratio);
+  const x=c.getContext('2d'),p=placement(W,H),color=guideGood?'#30d158':'#fff';
+  x.setTransform(ratio,0,0,ratio,0,0);x.translate(r.w/2,r.h/2);x.rotate(-turn*Math.PI/180);x.translate(-W/2,-H/2);
+  x.translate(p.cx,p.cy);x.scale(p.k*(guide.mirror?-1:1),p.k);x.translate(-p.mid[0],-p.mid[1]);
+  if(guide.ref?.outline){ink(x,q=>{const o=guide.ref.outline,t=2.4/p.k;for(let i=0;i<8;i++){const a=i*.7854;q.drawImage(o,Math.cos(a)*t,Math.sin(a)*t,guide.ref.w,guide.ref.h)}q.globalCompositeOperation='destination-out';q.drawImage(o,0,0,guide.ref.w,guide.ref.h)},color)}
+  else drawPose(x,guide.figures,{color,props:guide.props,wheels:guide.wheels,width:2.4*ratio});
+}
+function guideBar(line){
+  const box=$('guidebar');box.hidden=!guide;if(!guide)return;
+  const step=n=>{const i=(guide.list.indexOf(guide.pose)+n+guide.list.length)%guide.list.length,old=guide,m=old.mirror;usePose(guide.list[i],old.list);guide.mirror=m;drawGuide()};
+  const button=(t,label,onclick,on)=>el('button',{textContent:t,ariaLabel:label,className:on?'on':'',onclick});
+  box.textContent='';
+  box.append(el('b',{textContent:guide.name}),el('div',{id:'coach',textContent:line}),
+    el('div',{className:'row'},...(guide.list.length>1?[button('‹','Pichla pose',()=>step(-1)),button('›','Agla pose',()=>step(1))]:[]),
+      button('⇆','Pose palto',()=>{guide.mirror=!guide.mirror;drawGuide()}),button('−','Chhota',()=>{guide.size=Math.max(.35,guide.size*.9);drawGuide()}),button('+','Bada',()=>{guide.size=Math.min(2,guide.size*1.1);drawGuide()}),
+      button('🎯','Coach',()=>{coachOn=!coachOn;guideGood=false;guideBar(coachOn?'Dekh raha hoon…':guide.tip);drawGuide()},coachOn),
+      button('☰','Doosre poses',openPoses),button('✕','Guide band karo',closeGuide)));
+}
+
+/* ---------- distance and live coach ---------- */
+const FOV=1.44; // height seen at 1 metre, per metre, along the long side of a normal phone main camera
+// MediaPipe landmarks -> our joints, in pixels of a W x H picture. "left" here means left on screen.
+function fromLandmarks(l,W,H){
+  const ids={head:0,ls:12,rs:11,le:14,re:13,lw:16,rw:15,lh:24,rh:23,lk:26,rk:25,la:28,ra:27},j={},ok={};
+  for(const k in ids){const [x,y,v]=l[ids[k]];j[k]=[x*W,y*H];ok[k]=v>.45&&x>-.05&&x<1.05&&y>-.05&&y<1.05}
+  if(j.ls[0]>j.rs[0])for(const part of ['s','e','w','h','k','a']){const a='l'+part,b='r'+part;[j[a],j[b]]=[j[b],j[a]];[ok[a],ok[b]]=[ok[b],ok[a]]}
+  return {j,seen:k=>ok[k]};
+}
+const middle=(f,a,b)=>[(f.j[a][0]+f.j[b][0])/2,(f.j[a][1]+f.j[b][1])/2];
+// a length on the body that is easy to measure, with its real size in metres
+function ruler(f){
+  if(['ls','rs','lh','rh'].every(f.seen)){const a=middle(f,'ls','rs'),b=middle(f,'lh','rh');return {px:Math.hypot(a[0]-b[0],a[1]-b[1]),m:.5,kind:'torso'}}
+  if(f.seen('ls')&&f.seen('rs'))return {px:Math.hypot(f.j.ls[0]-f.j.rs[0],f.j.ls[1]-f.j.rs[1]),m:.37,kind:'shoulder'};
+  return null;
+}
+// camera-to-person distance in metres. longSide = pixel length of the camera picture's long side
+const metres=(r,longSide,zoom=1)=>r&&r.px>2?r.m*zoom*longSide/(FOV*r.px):0;
+const LIMBS=[['ls','le','left wala haath',38],['rs','re','right wala haath',38],['le','lw','left haath ki kohni',50],['re','rw','right haath ki kohni',50],['lh','lk','left wala pair',30],['rh','rk','right wala pair',30]];
+const angleOf=(f,a,b)=>Math.atan2(f.j[b][0]-f.j[a][0],f.j[b][1]-f.j[a][1])*180/Math.PI;
+const turnBetween=(a,b)=>((a-b+540)%360)-180;
+// compares the people in front of the camera with the guide; both are in pixels of the same upright frame
+function judge(live,target){
+  const cx=f=>middle(f,'ls','rs')[0],a=[...live].sort((p,q)=>cx(p)-cx(q)),b=[...target].sort((p,q)=>cx(p)-cx(q));
+  if(!a.length)return {text:'Insaan frame me lao',score:0};
+  if(a.length<b.length)return {text:`${b.length} log chahiye, abhi ${a.length} dikh rahe`,score:0};
+  const pairs=b.map((t,i)=>[a[i],t]),mean=list=>list.reduce((s,v)=>s+v,0)/list.length;
+  const sizes=[],dx=[],dy=[],wrong=[];let total=0,count=0;
+  for(const [p,t] of pairs){
+    const rp=ruler(p),rt=ruler(t);
+    if(rp&&rt){const key=rp.kind===rt.kind?1:rp.kind==='torso'?.74:1.35;sizes.push(rp.px*key/rt.px);
+      const mp=middle(p,'ls','rs'),mt=middle(t,'ls','rs');dx.push(mp[0]-mt[0]);dy.push(mp[1]-mt[1])}
+    for(const [from,to,name,limit] of LIMBS){
+      if(!(t.seen(from)&&t.seen(to)&&p.seen(from)&&p.seen(to)))continue;
+      const now=angleOf(p,from,to),want=angleOf(t,from,to),off=Math.abs(turnBetween(want,now));total+=Math.min(off,90);count++;
+      if(off>limit){const arm=to[1]==='e'||to[1]==='w',hint=arm?(Math.abs(want)>Math.abs(now)?'upar uthao':'neeche karo'):(turnBetween(want,now)>0?'screen ke right ki taraf':'screen ke left ki taraf');
+        wrong.push({off:off-limit,text:`${pairs.length>1?(pairs.findIndex(x=>x[0]===p)+1)+' number insaan: ':''}Screen par ${name} ${hint}`})}
+    }
+  }
+  const size=sizes.length?mean(sizes):1,shiftX=dx.length?mean(dx):0,shiftY=dy.length?mean(dy):0;
+  return {size,shiftX,shiftY,wrong:wrong.sort((p,q)=>q.off-p.off),score:Math.max(0,Math.round(100-(count?mean([total/count])*1.7:40)))};
+}
+const coachCanvas=el('canvas');
+async function coach(){
+  if(!guide||!coachOn||coachBusy||busy||rec||!stream||paused||!$('poses').hidden||!$('photo').hidden||performance.now()-coachAt<300)return;
+  coachBusy=true;const mine=guide;
+  try{
+    const turn=S.ui.rotate?tilt:0,k=Math.min(1,480/Math.max(view.width,view.height)),small=el('canvas',{width:Math.round(view.width*k),height:Math.round(view.height*k)});
+    small.getContext('2d').drawImage(view,0,0,small.width,small.height);
+    const input=turn?turned(small,turn,coachCanvas):small,W=input.width,H=input.height;
+    const out=await ask('pose',input,W,H);
+    if(guide!==mine)return;
+    const live=out.people.map(l=>fromLandmarks(l,W,H)),p=placement(W,H);
+    const target=guide.figures.map(f=>{const j={};for(const key of JOINTS){let x=(f.j[key][0]-p.mid[0])*p.k*(guide.mirror?-1:1)+p.cx,y=(f.j[key][1]-p.mid[1])*p.k+p.cy;j[key]=[x,y]}
+      if(guide.mirror)for(const part of ['s','e','w','h','k','a'])[j['l'+part],j['r'+part]]=[j['r'+part],j['l'+part]];return {j,seen:f.seen}});
+    const r=judge(live,target);
+    // distance: how much of the camera's long side the body covers
+    const longSource=Math.max(video.videoWidth,video.videoHeight),upSource=Math.abs(turn)===90?video.videoWidth*Math.abs(lastT.scale[0]):video.videoHeight*lastT.scale[1];
+    const near=live[0]&&ruler(live[0]),away=near?metres({px:near.px*upSource/H,m:near.m},longSource,S.hw[facing].zoom||1):0;
+    let text=r.text;
+    if(!text){
+      if(r.size>1.2)text='Thoda door jao (ya camera peeche lo)';
+      else if(r.size<.83)text='Thoda paas aao (ya camera aage lao)';
+      else if(Math.abs(r.shiftX)>W*.09)text=r.shiftX<0?'Screen par thoda right khisko':'Screen par thoda left khisko';
+      else if(Math.abs(r.shiftY)>H*.09)text=r.shiftY>0?'Camera thoda neeche jhukao':'Camera thoda upar uthao';
+      else if(r.wrong.length&&r.score<80)text=r.wrong[0].text;
+      else text=r.score>=70?'Perfect! Photo lo ✅':r.wrong[0]?.text||'Outline ke andar aao';
+    }
+    guideGood=text.startsWith('Perfect');
+    const line=$('coach');if(line)line.textContent=`${text}${away?` • abhi lagbhag ${away.toFixed(1)} m`:''}${r.score?` • match ${r.score}%`:''}`;
+    drawGuide();
+  }catch(e){if(e.message!=='retry'){console.warn('coach',e);coachOn=false;guideBar('Coach is phone par nahi chala. Outline dekh kar pose karo.')}}
+  finally{coachBusy=false;coachAt=performance.now()}
+}
+setInterval(coach,120);
+setInterval(()=>{if(guide&&guide.turn!==tilt){guide.turn=tilt;drawGuide()}},300);
+
+/* ---------- poses screen ---------- */
+let poseKind='single',poseQuery='',posePlaces=null;
+function poseCard(p,list){
+  const c=el('canvas',{width:220,height:260}),x=c.getContext('2d'),figures=libraryFigures(p),b=boxOf(figures,p.props,p.wheels),k=Math.min(200/b.w,240/b.h);
+  x.translate(110,130);x.scale(k,k);x.translate(-b.x-b.w/2,-b.y-b.h/2);drawPose(x,figures,{props:p.props,wheels:p.wheels,width:3});
+  return el('button',{className:'posecard g',onclick:()=>usePose(p,list)},c,el('span',{textContent:p.name}));
+}
+function poseGrid(){
+  const found=findPoses(poseKind,poseQuery,posePlaces),box=$('poseGrid');if(!box)return;
+  box.textContent='';
+  if(!found.matched)box.append(el('div',{className:'note wide',textContent:'Is jagah ke liye alag se pose nahi hai, saare dikha raha hoon.'}));
+  box.append(...found.list.map(p=>poseCard(p,found.list)));
+}
+function openPoses(){
+  const box=$('poses');box.hidden=false;showSheet(false);$('quick').hidden=true;$('guide').hidden=true;$('guidebar').hidden=true;box.textContent='';
+  const search=el('input',{type:'search',placeholder:'🔍 Jagah ya cheez: khet, chhat, deewar, kursi…',value:poseQuery});
+  const places=el('div',{className:'row',id:'places'},...PLACES.map(([id,label])=>chip(label,posePlaces?.[0]===id,()=>{posePlaces=posePlaces?.[0]===id?null:[id];poseQuery='';openPoses()})));
+  search.oninput=()=>{poseQuery=search.value;posePlaces=null;for(const b of places.children)b.className='';poseGrid()};
+  box.append(el('div',{className:'head'},iconButton('back','Wapas',{onclick:closePoses}),el('h1',{textContent:'Poses'}),chip('📷 Photo se',false,()=>$('pick').click())),
+    el('div',{className:'seg',id:'kinds'},...KINDS.map(([id,label])=>el('button',{textContent:label,className:poseKind===id?'on':'',onclick:()=>{poseKind=id;openPoses()}}))),
+    search,places,el('div',{id:'poseGrid'}));
+  poseGrid();
+}
+function closePoses(){$('poses').hidden=true;if(guide){$('guidebar').hidden=false;drawGuide()}}
+
+/* ---------- import a photo ---------- */
+const THINGS={person:'insaan',chair:'kursi',bench:'bench',couch:'sofa',bed:'bed','dining table':'table',cup:'cup',bottle:'bottle','wine glass':'glass',car:'car',motorcycle:'bike',bicycle:'cycle',bus:'bus',truck:'truck','potted plant':'gamla / paudha',vase:'phooldaan',
+boat:'naav',surfboard:'surfboard',backpack:'bag',handbag:'handbag',book:'kitaab',laptop:'laptop',tv:'TV',dog:'kutta',cat:'billi',horse:'ghoda',cow:'gaay',bird:'chidiya',umbrella:'chhata',clock:'ghadi','traffic light':'traffic light',tie:'tie','cell phone':'phone'};
+const THING_PLACES={chair:'chair',bench:'chair',couch:'ghar',bed:'ghar',tv:'ghar','dining table':'cafe',cup:'cafe','wine glass':'cafe',car:'bike',motorcycle:'bike',bicycle:'bike',bus:'road',truck:'road','traffic light':'road','potted plant':'phool',vase:'phool',boat:'paani',surfboard:'paani',backpack:'college',book:'college'};
+// what kind of place the picture shows, from its colours (people are left out)
+function placeColours(c,mask,mw,mh){
+  const s=el('canvas',{width:64,height:64}),x=s.getContext('2d',{willReadFrequently:true});x.drawImage(c,0,0,64,64);const d=x.getImageData(0,0,64,64).data;let green=0,sky=0,n=0,top=0;
+  for(let i=0;i<4096;i++){if(mask&&mask[Math.floor((i>>6)/64*mh)*mw+Math.floor((i&63)/64*mw)]>127)continue;const r=d[i*4],g=d[i*4+1],b=d[i*4+2];n++;
+    if(g>r*1.04&&g>b*1.12&&g>40)green++;if(i<1600){top++;if(b>r*1.15&&b>=g*.95&&b>90)sky++}}
+  const found=[];if(green>n*.18)found.push('khet','ped','phool');if(sky>top*.35)found.push('pahad','chhat');
+  return {found,label:[green>n*.18?'hariyali':'',sky>top*.35?'khula aasman':''].filter(Boolean).join(', ')};
+}
+function maskCanvas(mask,w,h){
+  const c=el('canvas',{width:w,height:h}),x=c.getContext('2d'),d=x.createImageData(w,h);
+  for(let i=0;i<w*h;i++){d.data[i*4]=d.data[i*4+1]=d.data[i*4+2]=255;d.data[i*4+3]=mask[i]>110?255:0}
+  x.putImageData(d,0,0);return c;
+}
+let imported=null,photoView='all',importJob=0;
+async function importPhoto(file){
+  const job=++importJob,box=$('photo');$('poses').hidden=true;showSheet(false);$('guide').hidden=true;$('guidebar').hidden=true;box.hidden=false;
+  const status=t=>{box.textContent='';box.append(el('div',{className:'head'},iconButton('back','Wapas',{onclick:closePhoto}),el('h1',{textContent:'Photo'})),el('div',{id:'photoStatus',className:'note',textContent:t}))};
+  status('Photo khol raha hoon…');
+  try{
+    const bmp=await createImageBitmap(file),k=Math.min(1,960/Math.max(bmp.width,bmp.height)),c=el('canvas',{width:Math.round(bmp.width*k),height:Math.round(bmp.height*k)});
+    c.getContext('2d').drawImage(bmp,0,0,c.width,c.height);bmp.close();
+    status('AI insaan, cheezein aur background alag kar raha hai… pehli baar thoda time lagta hai');
+    const attempt=async name=>{for(let i=0;i<2;i++){try{return await wait(ask(name,c,c.width,c.height),60000)}catch(e){if(e.message!=='retry'||i){console.warn('import',name,e);return {error:String(e.message||e)}}}}};
+    const body=await attempt('poseRef'),things=await attempt('things');
+    if(job!==importJob||box.hidden)return;
+    const people=(body.people||[]).map(l=>fromLandmarks(l,c.width,c.height)).filter(f=>f.seen('ls')||f.seen('rs')||f.seen('head'));
+    const place=placeColours(c,body.mask,body.w,body.h),objects=(things.things||[]).filter(t=>t.name!=='person');
+    const tags=[...new Set([...objects.map(t=>THING_PLACES[t.name]).filter(Boolean),...place.found])];
+    imported={c,people,objects,place,tags,mask:body.mask&&people.length?maskCanvas(body.mask,body.w,body.h):null,error:body.error&&things.error?body.error:''};
+    photoView='all';showImport();
+  }catch(e){console.warn(e);if(job===importJob)status('Ye photo nahi khul payi. JPG ya PNG photo chuno.')}
+}
+function closePhoto(){importJob++;$('photo').hidden=true;if(guide){$('guidebar').hidden=false;drawGuide()}}
+function paintImport(canvas){
+  const {c,mask,people,objects}=imported,W=c.width,H=c.height;canvas.width=W;canvas.height=H;const x=canvas.getContext('2d');
+  const cut=keep=>{const t=el('canvas',{width:W,height:H}),q=t.getContext('2d');q.drawImage(c,0,0);if(mask){q.globalCompositeOperation=keep?'destination-in':'destination-out';q.drawImage(mask,0,0,W,H)}return t};
+  if(photoView==='people'){x.fillStyle='#000';x.fillRect(0,0,W,H);x.drawImage(cut(true),0,0)}
+  else if(photoView==='back'){x.fillStyle='#333';x.fillRect(0,0,W,H);x.drawImage(cut(false),0,0)}
+  else x.drawImage(c,0,0);
+  if(photoView==='things'){const s=Math.max(W,H)/960;x.lineWidth=3*s;x.font=`600 ${26*s}px sans-serif`;
+    for(const t of objects){x.strokeStyle='#ffd23f';x.strokeRect(t.x*W,t.y*H,t.w*W,t.h*H);const text=THINGS[t.name]||t.name,w=x.measureText(text).width+12*s;x.fillStyle='#ffd23f';x.fillRect(t.x*W,Math.max(0,t.y*H-32*s),w,32*s);x.fillStyle='#000';x.fillText(text,t.x*W+6*s,Math.max(24*s,t.y*H-8*s))}}
+  if(photoView==='all'&&people.length){x.save();x.scale(1,1);for(const f of people){x.strokeStyle='#ffd23f';x.lineWidth=Math.max(W,H)/300;x.lineCap='round';
+    for(const [a,b] of [['ls','rs'],['ls','le'],['le','lw'],['rs','re'],['re','rw'],['ls','lh'],['rs','rh'],['lh','rh'],['lh','lk'],['lk','la'],['rh','rk'],['rk','ra']])if(f.seen(a)&&f.seen(b)){x.beginPath();x.moveTo(...f.j[a]);x.lineTo(...f.j[b]);x.stroke()}}x.restore()}
+}
+function advice(){
+  const {c,people}=imported;if(!people.length)return [];
+  const wide=c.width>c.height,longSide=wide?c.height*4/3:Math.max(c.height,c.width),rulers=people.map(ruler).filter(Boolean);
+  const list=[`Phone ${wide?'aada (landscape)':'seedha (portrait)'} pakdo.`];
+  if(rulers.length){const d=rulers.map(r=>metres(r,longSide)).sort((a,b)=>a-b)[0];
+    list.push(`Camera aur insaan ke beech lagbhag ${d.toFixed(1)} m (1× zoom), 2× zoom par lagbhag ${(d*2).toFixed(1)} m. Ye andaza hai.`)}
+  const xs=people.map(f=>middle(f,'ls','rs')[0]/c.width),x=xs.reduce((a,b)=>a+b,0)/xs.length;
+  list.push(`Insaan frame ke ${x<.4?'left':x>.6?'right':'beech'} me rakho.`);
+  const feet=people.some(f=>f.seen('la')||f.seen('ra')),hips=people.some(f=>f.seen('lh')||f.seen('rh'));
+  list.push(feet?'Poora sharir, pair samet, frame me aaye.':hips?'Kamar/ghutne tak ka shot hai, pair frame se bahar.':'Close-up shot hai: chehra aur kandhe.');
+  return list;
+}
+function useImported(){
+  const {c,people,mask,tags}=imported,figures=people;
+  let box=boxOf(figures);
+  if(mask){ // fit the box to the real silhouette
+    const q=mask.getContext('2d').getImageData(0,0,mask.width,mask.height).data;let a=1e9,b=1e9,e=0,f=0;
+    for(let y=0;y<mask.height;y++)for(let x=0;x<mask.width;x++)if(q[(y*mask.width+x)*4+3]){a=Math.min(a,x);b=Math.min(b,y);e=Math.max(e,x);f=Math.max(f,y)}
+    if(e>a)box={x:a*c.width/mask.width,y:b*c.height/mask.height,w:(e-a)*c.width/mask.width,h:(f-b)*c.height/mask.height};
+  }
+  guide={name:'Photo wala pose',tip:advice().slice(0,2).join(' '),figures,props:[],wheels:[],box,people:people.length,list:[],pose:null,dx:0,dy:0,size:1,mirror:false,ref:{w:c.width,h:c.height,outline:mask}};
+  openGuide();
+}
+function showImport(){
+  const box=$('photo'),{people,objects,place,tags,error}=imported,canvas=el('canvas',{id:'photoCanvas'});box.textContent='';
+  const views=[['all','Poori photo'],...(imported.mask?[['people','Sirf insaan'],['back','Sirf background']]:[]),['things',`Cheezein (${objects.length})`]];
+  const names=[...new Set(objects.map(t=>THINGS[t.name]||t.name))];
+  const kind=people.length>=3?'triple':people.length===2?'couple':'single';
+  const lines=el('div',{className:'card g'},...[
+    `Log: ${people.length||'koi nahi mila'}`,`Cheezein: ${names.join(', ')||'koi pehchani nahi'}`,`Jagah ka andaza: ${[place.label,...tags.map(t=>PLACES.find(p=>p[0]===t)?.[1])].filter(Boolean).slice(0,4).join(', ')||'saaf pata nahi'}`
+  ].map(t=>el('div',{className:'item',textContent:t})));
+  paintImport(canvas);
+  const suggested=findPoses(kind,'',tags.length?tags:null).list.slice(0,8);
+  box.append(el('div',{className:'head'},iconButton('back','Wapas',{onclick:closePhoto}),el('h1',{textContent:'Photo'}),chip('Doosri photo',false,()=>$('pick').click())),
+    el('div',{id:'photoBody'},canvas,el('div',{className:'row'},...views.map(([id,label])=>chip(label,photoView===id,()=>{photoView=id;showImport()}))),
+      ...(error?[el('div',{className:'note',textContent:'AI is phone par nahi chala: '+error.slice(0,140)})]:[]),lines,
+      ...(people.length?[el('div',{className:'card g'},...advice().map(t=>el('div',{className:'item',textContent:t}))),el('button',{id:'copyPose',className:'on',textContent:'Ye pose camera par lagao',onclick:useImported})]:[]),
+      el('h2',{textContent:'Is photo ke hisaab se aur poses'}),
+      el('div',{className:'seg'},...KINDS.map(([id,label])=>el('button',{textContent:label,onclick:()=>{poseKind=id;poseQuery='';posePlaces=tags.length?tags:null;$('photo').hidden=true;openPoses()}}))),
+      el('div',{id:'photoPoses',className:'grid3'},...suggested.map(p=>poseCard(p,suggested)))));
+}
+$('pick').onchange=e=>{const file=e.target.files[0];e.target.value='';if(file)importPhoto(file)};
+
 initGL();sync();quick();requestAnimationFrame(loop);start();
 </script></body></html>
