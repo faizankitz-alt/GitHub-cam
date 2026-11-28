@@ -41,17 +41,22 @@ canvas#view{width:100%;height:100%;object-fit:contain;object-position:50% 0;disp
 .seg{display:flex;background:#ffffff12;border-radius:16px;padding:3px;margin-bottom:10px}
 .seg button{flex:1;background:none!important;border-color:transparent!important;box-shadow:none!important;border-radius:13px}
 .seg button.on{background:var(--accent)!important}
-.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
-.tiles button{border-radius:16px;padding:14px 4px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.tiles button{border-radius:18px;padding:11px 2px 9px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px}
+.item .row{overflow-x:auto}
 .line{display:flex;justify-content:space-between;gap:8px}
+#compare{position:absolute;left:10px;bottom:218px;z-index:2}
 #side{position:absolute;right:10px;bottom:218px;display:flex;flex-direction:column;gap:10px;z-index:2}
 #dock{position:absolute;left:0;right:0;bottom:0;padding:0 0 18px;background:linear-gradient(#0000,#000b 45%);z-index:2;pointer-events:none}
 #dock>*{pointer-events:auto}
 #zoom,#modes{display:flex;gap:4px;width:max-content;margin:0 auto 10px;padding:4px;border-radius:30px}
 #zoom button{min-width:40px;height:34px;padding:0 8px;border-radius:17px;background:transparent}
-#modes button{background:transparent;border-color:transparent;box-shadow:none;padding:8px 18px}
+#modes button{background:transparent;border-color:transparent;box-shadow:none;padding:8px 15px}
 #zoom button.on,#modes button.on{background:var(--accent)}
 body:not(.glass) #modes button.on{background:none;color:var(--accent)}
+body:not(.glass) #modes{background:transparent;border-color:transparent}
+body:not(.glass) .g{background:rgba(30,30,32,.82);-webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%)}
+body:not(.glass) #modes.g{background:transparent;-webkit-backdrop-filter:none;backdrop-filter:none}
 #bar{display:flex;align-items:center;justify-content:space-between;padding:0 34px}
 #thumb{width:54px;height:54px;border-radius:16px;padding:0;background-size:cover;background-position:center}
 #flip{width:54px;height:54px}
@@ -120,30 +125,30 @@ const PRESETS={
 'Normal':{},
 'LOG Flat':{lg:100},
 'LOG Cinema':{lg:70,te:40,go:25,vi:15},
-'Selfie Bright':{e:14,s:25,w:6,cl:-22,vi:10},
-'Peach':{w:22,t:14,r:20,e:8,f:12,cl:-15},
-'Rosy':{t:32,r:30,e:6,s:12,cl:-20},
-'Glow Up':{e:15,cl:-45,go:22,vi:22,s:15},
+'Selfie Bright':{e:14,s:25,w:6,vi:10},
+'Peach':{w:22,t:14,r:20,e:8,f:7},
+'Rosy':{t:32,r:30,e:6,s:12},
+'Glow Up':{e:15,go:22,vi:22,s:15},
 'Sunkissed':{w:38,go:45,s:22,vi:18,c:8},
-'Honey':{w:42,go:30,sa:6,f:14,r:10},
+'Honey':{w:42,go:30,sa:6,f:8,r:10},
 'Berry':{t:40,te:20,sa:14,c:15,r:25},
-'Lavender':{t:35,w:-18,f:25,b:20,e:6},
-'Mint':{t:-30,w:-10,e:10,f:18,g:15},
+'Lavender':{t:35,w:-18,f:14,b:20,e:6},
+'Mint':{t:-30,w:-10,e:10,f:10,g:15},
 'Aqua':{te:55,w:-22,b:35,vi:20},
-'Coffee':{w:28,sa:-35,c:20,f:12,vg:25},
+'Coffee':{w:28,sa:-35,c:20,f:7,vg:25},
 'Caramel':{w:35,sa:-10,go:38,c:15,r:15},
-'Milky':{e:18,c:-30,f:38,sa:-8,cl:-30},
+'Milky':{e:18,c:-30,f:21,sa:-8},
 'Ice':{w:-50,e:15,h:12,sa:-10,cl:10},
 'Neon':{sa:45,vi:60,c:30,t:18,cl:35},
 'Cyberpunk':{t:45,te:75,w:-25,c:30,b:40,sa:20},
-'Purple Haze':{t:55,w:-10,f:30,te:20,vg:20},
-'Y2K':{e:12,c:25,sa:25,t:15,gr:25,f:15},
-'Disposable':{c:25,w:18,gr:45,vg:45,f:18,e:6},
-'Polaroid':{f:40,w:10,c:5,sa:-8,go:30,te:25},
+'Purple Haze':{t:55,w:-10,f:16,te:20,vg:20},
+'Y2K':{e:12,c:25,sa:25,t:15,f:8},
+'Disposable':{c:25,w:18,vg:45,f:10,e:6},
+'Polaroid':{f:22,w:10,c:5,sa:-8,go:30,te:25},
 'Candy':{sa:30,vi:35,t:20,e:12,s:20},
 'Tropical':{vi:55,g:30,b:30,w:10,c:15},
 'Autumn':{w:30,r:35,g:-45,go:30,c:15},
-'Cherry Blossom':{t:25,r:35,e:14,h:-15,f:15,b:-10},
+'Cherry Blossom':{t:25,r:35,e:14,h:-15,f:8,b:-10},
 'Emerald':{g:45,te:45,c:18,t:-18},
 'Midnight':{e:-20,w:-35,c:25,te:40,vg:45},
 'Noir':{sa:-100,c:70,e:-10,vg:55},
@@ -153,10 +158,10 @@ const PRESETS={
 'Lotus Vivid':{e:8,c:14,s:18,sa:18,vi:35,r:25,g:20,b:40,sh:30,cl:15},
 'Himalaya':{c:18,s:22,h:-10,sa:15,vi:40,g:40,b:35,w:5,sh:35,cl:30},
 'Golden Hour':{e:2,c:12,w:48,t:8,sa:10,vi:15,go:40,h:-12,vg:20},
-'Sunset Haze':{w:35,t:18,f:18,go:35,sa:12,h:-8,c:6},
+'Sunset Haze':{w:35,t:18,f:10,go:35,sa:12,h:-8,c:6},
 'Deep Lake':{e:-8,c:28,te:65,b:25,sa:-4,w:-12,vg:30},
 'Orange Teal':{c:20,te:70,go:45,vi:15,r:10},
-'Moody':{e:-15,c:25,s:-20,sa:-22,te:25,vg:40,gr:12},
+'Moody':{e:-15,c:25,s:-20,sa:-22,te:25,vg:40},
 'Dark Forest':{e:-12,c:22,g:-10,sa:-12,w:-8,te:35,s:-15,vg:35,cl:20},
 'Fresh Green':{e:6,g:55,vi:20,s:15,w:-4,sh:20},
 'Blue Sky':{b:60,vi:20,c:12,h:-20,w:-6},
@@ -164,37 +169,44 @@ const PRESETS={
 'Night':{e:38,s:45,h:-25,c:8,sa:5,cl:10},
 'Night City':{e:15,c:22,s:20,t:20,te:50,b:25,vi:25,vg:22},
 'Bright':{e:18,s:20,c:5,vi:10},
-'Soft Portrait':{e:8,c:-8,s:15,h:-10,w:10,r:8,vi:8,cl:-25},
-'Skin Glow':{e:10,w:16,t:6,s:18,cl:-35,h:-8,go:15},
-'Pink Dream':{t:28,r:25,f:22,e:8,c:-8,go:10},
-'Pastel':{f:35,c:-18,e:12,sa:-12,vi:10,t:6},
-'Matte':{f:45,c:10,sa:-10,s:-5},
-'Film Classic':{c:14,f:20,w:14,sa:-8,go:20,te:15,gr:28,vg:22},
-'Vintage 90s':{f:30,w:28,t:-6,sa:-18,gr:40,vg:30,go:25},
-'Retro Fade':{f:55,w:12,t:14,sa:-15,te:20,gr:18},
+'Soft Portrait':{e:8,c:-8,s:15,h:-10,w:10,r:8,vi:8},
+'Skin Glow':{e:10,w:16,t:6,s:18,h:-8,go:15},
+'Pink Dream':{t:28,r:25,f:12,e:8,c:-8,go:10},
+'Pastel':{f:19,c:-18,e:12,sa:-12,vi:10,t:6},
+'Matte':{f:25,c:10,sa:-10,s:-5},
+'Film Classic':{c:14,f:11,w:14,sa:-8,go:20,te:15,vg:22},
+'Vintage 90s':{f:16,w:28,t:-6,sa:-18,vg:30,go:25},
+'Retro Fade':{f:30,w:12,t:14,sa:-15,te:20},
 'Warm':{w:35,sa:5},
 'Cool':{w:-35,b:10},
-'Winter':{w:-28,e:12,sa:-18,b:15,h:-10,f:10},
+'Winter':{w:-28,e:12,sa:-18,b:15,h:-10,f:6},
 'Desert':{w:30,c:18,r:12,g:-30,b:-15,go:35,cl:20},
 'Monsoon':{e:-6,w:-15,g:25,te:30,c:12,sa:-5,cl:18},
 'HDR Pop':{h:-45,s:50,c:15,vi:30,cl:55,sh:30},
 'Crisp':{sh:55,cl:30,c:10,vi:10},
-'Dreamy':{cl:-55,e:12,f:20,w:8,h:-10},
+'Dreamy':{e:12,f:11,w:8,h:-10},
 'B&W':{sa:-100,c:15},
-'B&W Hard':{sa:-100,c:55,cl:35,vg:35,gr:15},
-'B&W Soft':{sa:-100,f:30,c:-8,e:8},
-'Sepia':{sa:-100,go:55,w:55,f:15,vg:20}};
+'B&W Hard':{sa:-100,c:55,cl:35,vg:35},
+'B&W Soft':{sa:-100,f:16,c:-8,e:8},
+'Sepia':{sa:-100,go:55,w:55,f:8,vg:20}};
 const zeros=()=>Object.fromEntries(PARAMS.map(p=>[p[0],0]));
 const presetVals=code=>{const o=zeros();for(const k in code)o[PARAMS[CODES.indexOf(k)][0]]=code[k];return o};
 
-const PORTRAIT=[['blur','Background blur',0,100,60],['sizeX','Focus width',10,100,45],['sizeY','Focus height',10,100,60],['feather','Edge softness',1,100,40],
-['bgDark','Background dark',0,100,15],['bgSat','Background color',-100,100,0],['light','Subject light',-50,50,8],['smooth','Skin smooth',0,100,30]];
+const PORTRAIT=[['blur','Background blur',0,100,60],['edge','Kinara (+ zyada sharp)',-50,50,10],['sizeX','Focus width',10,100,45],['sizeY','Focus height',10,100,60],
+['feather','Edge softness',1,100,22],['bokeh','Bokeh lights',0,100,0],['bgDark','Background dark',0,100,10],['bgLight','Background white',0,100,0],
+['bgSat','Background color',-100,100,0],['bgWarm','Background warm/cool',-100,100,0],['subSat','Subject color',-100,100,0],['light','Subject light',-50,50,6],
+['smooth','Skin smooth',0,100,20],['zoomBlur','Motion zoom',0,100,0]];
+const LOOK=Object.fromEntries(PORTRAIT.filter(p=>!['edge','sizeX','sizeY'].includes(p[0])).map(p=>[p[0],p[4]]));
+const STYLES={'Natural':{blur:45,smooth:15},'Soft':{blur:55,smooth:50,light:10,bgLight:12,feather:35},'DSLR':{blur:90,bokeh:35,bgSat:10,feather:16},
+'Bokeh Lights':{blur:85,bokeh:100,bgDark:22},'Studio':{blur:50,bgDark:55,light:18,smooth:35},'Black Stage':{blur:30,bgDark:100,light:14},
+'Mono Studio':{blur:45,bgSat:-100,subSat:-100,bgDark:60,light:12},'Colour Pop':{blur:35,bgSat:-100,subSat:18},'White High-Key':{blur:60,bgLight:88,light:14,smooth:40},
+'Cinematic':{blur:65,bgWarm:-65,bgDark:25,subSat:6},'Golden':{blur:55,bgWarm:75,bokeh:45,light:10},'Motion Zoom':{blur:30,zoomBlur:85},'Vintage':{blur:40,bgWarm:35,bgSat:-45,smooth:25}};
 const MODES=['AI Aadmi','AI Cheez (tap)','Oval'];
 const DEF_TOP={timer:0,grid:false,aspect:0,level:false,watermark:false};
-const DEF_UI={glass:true,blur:14,tint:14,accent:'#ffd23f',sound:true,volume:true,keep:true,markText:'Shot on Kezmo Cam'};
+const DEF_UI={rotate:true,glass:true,blur:14,tint:14,accent:'#ffd23f',sound:true,volume:true,keep:true,markText:'Shot on Kezmo Cam'};
 const defaultsLow=()=>({preset:'Normal',edits:{},strengths:{},lens:'None',
-portrait:{on:false,mode:0,x:.5,y:.5,...Object.fromEntries(PORTRAIT.map(p=>[p[0],p[4]]))},
-res:1,fps:30,mirror:true,steady:false,steadyAmt:60,hdPhoto:true,jpeg:97,hw:{environment:{},user:{}}});
+portrait:{on:false,mode:0,style:'Natural',x:.5,y:.5,...Object.fromEntries(PORTRAIT.map(p=>[p[0],p[4]]))},
+res:1,fps:30,mirror:true,aiFilter:false,nr:1,night:false,steady:false,steadyAmt:60,hdPhoto:true,jpeg:97,hw:{environment:{},user:{}}});
 const defaults=()=>({...defaultsLow(),...DEF_TOP,ui:{...DEF_UI},facing:'environment',videoMode:false});
 let S=defaults(),custom={};
 try{const d=JSON.parse(localStorage.getItem('kezmo3')||'{}');if(d.S)S={...S,...d.S,portrait:{...S.portrait,...d.S.portrait},ui:{...S.ui,...d.S.ui}};custom=d.custom||{}}catch(e){}
@@ -204,18 +216,23 @@ const original=n=>custom[n]?{...zeros(),...custom[n]}:presetVals(PRESETS[n]||{})
 const cur=()=>S.edits[S.preset]||original(S.preset);        // every filter keeps its own edits
 const strength=()=>S.strengths[S.preset]??100;
 const edit=(k,x)=>{S.edits[S.preset]={...cur(),[k]:x}};
+const can4K={}; // per camera: true / false, filled in once the camera is open
+// Photos come from the sensor's full still picture, so a light 1080p preview keeps the app smooth.
+const camRes=()=>{const want=videoMode||!S.hdPhoto||hdBroken||!window.ImageCapture?S.res:1;return S.night&&!videoMode?1:want};
 const ASPECTS=[['Full',0],['16:9',9/16],['4:3',3/4],['1:1',1]], RES=[['720p',1280,720],['1080p',1920,1080],['4K',3840,2160]];
 let stream=null,track=null,facing=S.facing,videoMode=S.videoMode,rec=null,starting=false,restart=false,paused=false,torchOn=false,comparing=false,aim={x:.5,y:.5},busy=false,
-countdown=0,tab='Filters',moreTab='General',query='',saving=Promise.resolve();
+countdown=0,tab='Filters',tilt=0,hdBroken=false,openedRes=-1,moreTab='General',query='',saving=Promise.resolve();
 
 /* ---------- WebGL ---------- */
 let gl,progMain,progCopy,progBlur,vtex,mtex,fbos=[],fboW=0,fboH=0;
 const glc=document.createElement('canvas');
 const VS=`attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0.,1.);}`;
-const FS_COPY=`precision mediump float;varying vec2 v;uniform sampler2D tex,maskTex;uniform vec2 scale,off;uniform float weighted;void main(){
+const FS_COPY=`precision mediump float;varying vec2 v;uniform sampler2D tex,maskTex;uniform vec2 scale,off,maskOff;uniform float weighted,bokeh;void main(){
  vec2 uv=.5+(v-.5)*scale+off;
- float a=weighted>.5?max(.02,1.-smoothstep(.15,.6,texture2D(maskTex,uv).r)):1.;
- gl_FragColor=vec4(texture2D(tex,uv).rgb*a,a);}`;
+ float a=weighted>.5?max(.1,1.-smoothstep(.15,.6,texture2D(maskTex,uv-maskOff).r)):1.;
+ vec3 c=texture2D(tex,uv).rgb;
+ a*=(1.+bokeh*4.*pow(dot(c,vec3(.3,.6,.1)),5.))/(1.+bokeh*4.); // bright points weigh more: round light bokeh
+ gl_FragColor=vec4(c*a,a);}`;
 const FS_BLUR=`precision mediump float;varying vec2 v;uniform sampler2D tex;uniform vec2 dir;void main(){
  vec4 c=texture2D(tex,v)*.227027;
  c+=(texture2D(tex,v+dir*1.3846)+texture2D(tex,v-dir*1.3846))*.316216;
@@ -223,19 +240,36 @@ const FS_BLUR=`precision mediump float;varying vec2 v;uniform sampler2D tex;unif
  gl_FragColor=c;}`;
 const FS_MAIN=`precision highp float;varying vec2 v;uniform sampler2D tex,soft,maskTex;uniform vec2 scale,off,px;uniform float seed,aspect,srcAspect,useMask;uniform vec4 warp[4];
 uniform float ${PARAMS.map(p=>p[0]==='log'?'logAmt':p[0]).join(',')};
-uniform float pOn,pX,pY,sizeX,sizeY,feather,bgDark,bgSat,light,smoothAmt;
+uniform float pOn,pX,pY,sizeX,sizeY,feather,bgDark,bgSat,light,smoothAmt,edge,bgLight,subSat,bgWarm,zoomBlur,nr;
+uniform vec2 srcPx,maskPx,maskOff,zc;
 float lum(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
+// bring colours back into range without flattening detail
+vec3 fit(vec3 c){float l=clamp(lum(c),0.,1.),hi=max(c.r,max(c.g,c.b)),lo=min(c.r,min(c.g,c.b));
+ if(hi>1.)c=l+(c-l)*((1.-l)/max(hi-l,.0001));lo=min(c.r,min(c.g,c.b));if(lo<0.)c=l+(c-l)*(l/max(l-lo,.0001));return clamp(c,0.,1.);}
+// stronger colour that slows down before a channel hits its limit, so texture stays
+vec3 boost(vec3 c,float k){float l=lum(c);
+ if(k>1.){float hi=max(c.r,max(c.g,c.b)),lo=min(c.r,min(c.g,c.b)),m=max(1.001,min((hi+(1.-hi)*.75-l)/max(hi-l,.001),(l-lo*.35)/max(l-lo,.001)));k=1.+(m-1.)*(1.-exp(-(k-1.)/(m-1.)));}
+ return mix(vec3(l),c,max(k,0.));}
+// AI mask, snapped to the real colour edges of the picture
+float matte(vec2 uv,vec3 ref){float sum=0.,tw=0.;
+ for(int i=-1;i<=1;i++)for(int j=-1;j<=1;j++){vec2 o=vec2(float(i),float(j))*maskPx*1.3;vec3 d=texture2D(tex,uv+o).rgb-ref;
+  float w=exp(-dot(d,d)*30.)+.04;sum+=texture2D(maskTex,uv+o-maskOff).r*w;tw+=w;}
+ return sum/tw;}
 void main(){
  vec2 uv=.5+(v-.5)*scale+off;
  if(warp[0].z>0.){vec2 d=(uv-warp[0].xy)*vec2(1.,1./srcAspect);float r=length(d)/warp[0].z;if(r<1.)uv=warp[0].xy+(uv-warp[0].xy)*(1.-warp[0].w*(1.-r*r)*(1.-r*r));}
  if(warp[1].z>0.){vec2 d=(uv-warp[1].xy)*vec2(1.,1./srcAspect);float r=length(d)/warp[1].z;if(r<1.)uv=warp[1].xy+(uv-warp[1].xy)*(1.-warp[1].w*(1.-r*r)*(1.-r*r));}
  if(warp[2].z>0.){vec2 d=(uv-warp[2].xy)*vec2(1.,1./srcAspect);float r=length(d)/warp[2].z;if(r<1.)uv=warp[2].xy+(uv-warp[2].xy)*(1.-warp[2].w*(1.-r*r)*(1.-r*r));}
  if(warp[3].z>0.){vec2 d=(uv-warp[3].xy)*vec2(1.,1./srcAspect);float r=length(d)/warp[3].z;if(r<1.)uv=warp[3].xy+(uv-warp[3].xy)*(1.-warp[3].w*(1.-r*r)*(1.-r*r));}
- vec3 c=texture2D(tex,uv).rgb;
+ vec3 c=texture2D(tex,uv).rgb,raw=c;
+ if(nr>0.){vec3 sum=c;float tw=1.;
+  for(int i=0;i<8;i++){float a=float(i)*.7854,r=mod(float(i),2.)<.5?1.3:2.8;vec3 q=texture2D(tex,uv+vec2(cos(a),sin(a))*srcPx*r).rgb;
+   float w=max(0.,1.-length(q-c)*(8.-4.5*nr));sum+=q*w;tw+=w;}
+  vec3 m=sum/tw;float l0=lum(c),lm=lum(m);c=vec3(mix(l0,lm,nr))+mix(c-l0,m-lm,min(1.,nr*1.25));}
  vec3 n1=texture2D(tex,uv+vec2(px.x,0.)).rgb,n2=texture2D(tex,uv-vec2(px.x,0.)).rgb,n3=texture2D(tex,uv+vec2(0.,px.y)).rgb,n4=texture2D(tex,uv-vec2(0.,px.y)).rgb;
  float bg=0.;
  if(pOn>.5){
-  if(useMask>.5){bg=1.-smoothstep(.5-feather*.45,.5+feather*.45,texture2D(maskTex,uv).r);}
+  if(useMask>.5){float t=.5-edge*.6;bg=1.-smoothstep(t-feather*.4,t+feather*.4,matte(uv,raw));}
   else{vec2 d=(v-vec2(pX,pY))/vec2(sizeX*.6,sizeY*.6);bg=smoothstep(1.-feather*.5,1.+feather,length(d));}
   float skin=step(c.b,c.g)*step(c.g,c.r)*smoothstep(.04,.12,c.r-c.b)*(1.-bg);
   if(smoothAmt>0.&&skin>0.){
@@ -244,31 +278,35 @@ void main(){
     vec3 q=texture2D(tex,uv+vec2(cos(a),sin(a))*px*r).rgb;float w=max(0.,1.-length(q-c)*5.);sum+=q*w;tw+=w;}
    c=mix(c,sum/tw,smoothAmt*skin);
   }
-  c+=(c-(n1+n2+n3+n4)*.25)*sharpness*1.6*(1.-bg);
-  vec4 sf=texture2D(soft,v);c=mix(c,sf.rgb/max(sf.a,.004),bg);
- } else c+=(c-(n1+n2+n3+n4)*.25)*sharpness*1.6;
- if(clarity!=0.){vec3 s=vec3(0.);
-  if(pOn>.5){for(int i=0;i<8;i++){float a=float(i)*.7854;s+=texture2D(tex,uv+vec2(cos(a),sin(a))*px*9.).rgb;}s/=8.;}else s=texture2D(soft,v).rgb;
-  c+=(c-s)*clarity*(1.-bg)*(clarity>0.?.8:.6);}
- c*=pow(2.,exposure);
- c=(c-.5)*(1.+contrast*.7)+.5;
+  c+=(raw-(n1+n2+n3+n4)*.25)*sharpness*1.6*(1.-bg)*(1.-nr*.8);
+  vec3 blurred=vec3(0.);
+  if(zoomBlur>0.){for(int i=0;i<8;i++){vec4 s=texture2D(soft,v-(v-zc)*zoomBlur*.035*float(i));blurred+=s.rgb/max(s.a,.004);}blurred/=8.;}
+  else{vec4 sf=texture2D(soft,v);blurred=sf.rgb/max(sf.a,.004);}
+  c=mix(c,blurred,bg);
+ } else c+=(raw-(n1+n2+n3+n4)*.25)*sharpness*1.6*(1.-nr*.8);
+ if(clarity!=0.){vec3 s=vec3(0.);float r=clarity<0.?3.:9.;
+  for(int i=0;i<8;i++){float a=float(i)*.7854;s+=texture2D(tex,uv+vec2(cos(a),sin(a))*px*r).rgb;}s/=8.;
+  if(clarity>0.){if(pOn<.5)s=texture2D(soft,v).rgb;c+=(c-s)*clarity*(1.-bg)*.7;}
+  else c+=(s-raw)*(-clarity)*.6*(1.-smoothstep(.04,.14,length(raw-s)))*(1.-bg);} // soften skin-like areas, keep edges
+ if(exposure>0.)c=1.-pow(clamp(1.-c,0.,1.),vec3(pow(2.,exposure*1.3)));else c*=pow(2.,exposure);
+ if(contrast>0.){vec3 k=clamp(c,0.,1.);c=mix(k,k*k*(3.-2.*k),min(1.,contrast*1.2));}else c=(c-.5)*(1.+contrast*.6)+.5;
  float l=clamp(lum(c),0.,1.);
  c+=highlights*.3*smoothstep(.4,1.,l);
  c+=shadows*.3*(1.-smoothstep(0.,.6,l));
  c+=vec3(warmth*.12+tint*.04,-tint*.09,-warmth*.12+tint*.04);
- c=clamp(c,0.,1.);
+ c=fit(c);
  if(hue!=0.){float a=hue*.6,cs=cos(a),sn=sin(a);vec3 k=vec3(.57735);c=c*cs+cross(k,c)*sn+k*dot(k,c)*(1.-cs);c=clamp(c,0.,1.);}
  float rm=clamp((c.r-max(c.g,c.b))*3.,0.,1.),gm=clamp((c.g-max(c.r,c.b))*4.+(min(c.r,c.g)-c.b),0.,1.),bm=clamp((c.b-max(c.r,c.g*.85))*3.,0.,1.);
- l=lum(c);
- c=mix(vec3(l),c,1.+reds*rm*.8+greens*gm*.8+blues*bm*.8);
+ c=boost(c,1.+reds*rm*.8+greens*gm*.8+blues*bm*.8);
  float sat=max(c.r,max(c.g,c.b))-min(c.r,min(c.g,c.b));
- c=mix(vec3(lum(c)),c,max(0.,(1.+saturation)*(1.+vibrance*(1.-clamp(sat,0.,1.))*.9)));
- l=clamp(lum(c),0.,1.);
+ c=boost(c,(1.+saturation)*(1.+vibrance*(1.-clamp(sat,0.,1.))*.9));
+ c=fit(c);l=clamp(lum(c),0.,1.);
  c+=teal*vec3(-.12,.04,.09)*(1.-smoothstep(0.,.65,l))*smoothstep(0.,.15,l);
  c+=gold*vec3(.11,.04,-.09)*smoothstep(.35,.9,l);
  c=c*(1.-fade*.22)+fade*.16;
  if(logAmt>0.){vec3 f=.09+.62*log2(1.+max(c,0.)*7.)/3.;f=mix(vec3(lum(f)),f,.65);c=mix(c,f,logAmt);}
- if(pOn>.5){c=mix(vec3(lum(c)),c,1.+bgSat*bg);c*=1.-bgDark*.7*bg;c*=1.+light*(1.-bg);}
+ c=fit(c);
+ if(pOn>.5){c=mix(vec3(lum(c)),c,max(0.,1.+mix(subSat,bgSat,bg)));c+=bg*bgWarm*vec3(.13,.02,-.13);c*=1.-bgDark*bg;c=mix(c,vec3(1.),bgLight*bg*.93);c*=1.+light*(1.-bg);}
  vec2 q=(v-.5)*vec2(aspect,1.)/length(vec2(aspect,1.))*2.;
  c*=1.-vignette*.75*smoothstep(.35,1.05,length(q));
  if(grain>0.){float n=fract(sin(dot(gl_FragCoord.xy+seed,vec2(12.9898,78.233)))*43758.5453);c+=(n-.5)*grain*.22;}
@@ -318,15 +356,15 @@ function transform(g,still){
   return {scale:[g.sx*zoom*(facing==='user'&&S.mirror?-1:1),g.sy*zoom],off:S.steady&&!still?[steady.cx*g.sx,-steady.cy*g.sy]:[0,0]};
 }
 let lastT=transform({sx:1,sy:1},true);
-function render(src,w,h,{target=view,still=false,ratio=0}={}){
+function render(src,w,h,{target=view,still=false,ratio=0,mark=true}={}){
   if(!gl||gl.isContextLost())return;
   const limit=still?Math.min(4096,gl.getParameter(gl.MAX_TEXTURE_SIZE)):rec?3840:1920;
   const g=geometry(w,h,ratio,limit),t=transform(g,still),{scale,off}=t;if(!still)lastT=t;
   if(glc.width!==g.W||glc.height!==g.H){glc.width=g.W;glc.height=g.H}
   gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,vtex);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
-  const k=strength()/100,P=S.portrait,ai=P.mode<2&&!AI.failed,pOn=P.on&&!comparing&&(!ai||!!AI.mask),useMask=pOn&&ai,base=cur();
-  const vals=Object.fromEntries(PARAMS.map(p=>[p[0],comparing?0:(base[p[0]]||0)*k/100]));
+  const P=lookNow(),ai=P.mode<2&&!AI.failed,pOn=P.on&&!comparing&&(!ai||!!AI.mask),useMask=pOn&&ai;
+  const vals=effective(),maskOff=still&&src!==video?[0,0]:AI.off;
   if(pOn||vals.clarity){
     const bw=Math.max(2,Math.round(g.W/g.H>1?360:360*g.W/g.H)),bh=Math.max(2,Math.round(bw*g.H/g.W));
     if(bw!==fboW||bh!==fboH){
@@ -338,7 +376,7 @@ function render(src,w,h,{target=view,still=false,ratio=0}={}){
     gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,null);gl.activeTexture(gl.TEXTURE0);
     gl.viewport(0,0,bw,bh);
     gl.bindTexture(gl.TEXTURE_2D,vtex);gl.bindFramebuffer(gl.FRAMEBUFFER,fbos[0].f);
-    gl.useProgram(progCopy.p);gl.uniform1i(progCopy.u('tex'),0);gl.uniform1i(progCopy.u('maskTex'),2);gl.uniform1f(progCopy.u('weighted'),useMask?1:0);
+    gl.useProgram(progCopy.p);gl.uniform1i(progCopy.u('tex'),0);gl.uniform1i(progCopy.u('maskTex'),2);gl.uniform1f(progCopy.u('weighted'),useMask?1:0);gl.uniform2fv(progCopy.u('maskOff'),maskOff);gl.uniform1f(progCopy.u('bokeh'),pOn?P.bokeh/100:0);
     gl.uniform2fv(progCopy.u('scale'),scale);gl.uniform2fv(progCopy.u('off'),off);gl.drawArrays(gl.TRIANGLES,0,3);
     gl.useProgram(progBlur.p);gl.uniform1i(progBlur.u('tex'),0);
     const radius=pOn?.15+P.blur/100*1.5:1;
@@ -357,74 +395,201 @@ function render(src,w,h,{target=view,still=false,ratio=0}={}){
   gl.uniform1f(m.u('seed'),still?1:performance.now()%1000);gl.uniform1f(m.u('aspect'),g.W/g.H);gl.uniform1f(m.u('srcAspect'),w/h);gl.uniform1f(m.u('useMask'),useMask?1:0);
   for(const key in vals)gl.uniform1f(m.u(key==='log'?'logAmt':key),vals[key]);
   gl.uniform4fv(m.u('warp[0]'),warps(w,h));
-  const pu={pOn:pOn?1:0,pX:P.x,pY:P.y,sizeX:P.sizeX/100,sizeY:P.sizeY/100,feather:P.feather/100,bgDark:P.bgDark/100,bgSat:P.bgSat/100,light:P.light/100,smoothAmt:P.smooth/100};
+  const pu={pOn:pOn?1:0,pX:P.x,pY:P.y,sizeX:P.sizeX/100,sizeY:P.sizeY/100,feather:P.feather/100,bgDark:P.bgDark/100,bgSat:P.bgSat/100,light:P.light/100,smoothAmt:P.smooth/100,edge:P.edge/100,bgLight:P.bgLight/100,subSat:P.subSat/100,bgWarm:P.bgWarm/100,zoomBlur:P.zoomBlur/100,nr:comparing?0:nrAmount(w,h)};
+  gl.uniform2f(m.u('srcPx'),1/w,1/h);gl.uniform2f(m.u('maskPx'),1/(AI.mw||256),1/(AI.mh||256));gl.uniform2fv(m.u('maskOff'),maskOff);
+  gl.uniform2fv(m.u('zc'),useMask?[(aimShown.x-.5-off[0])/scale[0]+.5,(.5-aimShown.y-off[1])/scale[1]+.5]:[P.x,P.y]);
   for(const key in pu)gl.uniform1f(m.u(key),pu[key]);
   gl.drawArrays(gl.TRIANGLES,0,3);
   if(target.width!==g.W||target.height!==g.H){target.width=g.W;target.height=g.H;if(target===view)layout()}
   const x=target.getContext('2d');x.drawImage(glc,0,0);
-  if(!comparing){drawLens(x,g.W,g.H,t);
-    if(S.watermark&&S.ui.markText){const size=Math.round(Math.min(g.W,g.H)*.038);x.save();x.font=`600 ${size}px sans-serif`;x.fillStyle='#fff';x.shadowColor='#000a';x.shadowBlur=size/4;x.fillText(S.ui.markText,size,g.H-size);x.restore()}}
+  if(!comparing){drawLens(x,g.W,g.H,t);if(mark&&!(rec&&recTilt))drawMark(x,g.W,g.H)}
 }
+function drawMark(x,W,H){
+  if(!S.watermark||!S.ui.markText)return;
+  const size=Math.round(Math.min(W,H)*.038);x.save();x.font=`600 ${size}px sans-serif`;x.fillStyle='#fff';x.shadowColor='#000a';x.shadowBlur=size/4;x.fillText(S.ui.markText,size,H-size);x.restore();
+}
+// turn the finished picture so that it stands upright when the phone is held sideways
+function turned(source,deg,into){
+  const w=source.width,height=source.height,side=Math.abs(deg)===90,c=into||el('canvas');
+  const W=side?height:w,H=side?w:height;if(c.width!==W||c.height!==H){c.width=W;c.height=H}
+  const x=c.getContext('2d');x.save();x.translate(W/2,H/2);x.rotate(deg*Math.PI/180);x.drawImage(source,-w/2,-height/2);x.restore();return c;
+}
+
+/* ---------- scene analysis: "AI scene" filter, Night mode and noise cleaning use it ---------- */
+const scene={L:.45,p10:.1,p90:.8,clip:0,cast:0,sat:.25,green:0,sky:0,skin:0,at:0,seen:false};
+const sceneCanvas=el('canvas',{width:64,height:64});
+function analyse(src){
+  const x=sceneCanvas.getContext('2d',{willReadFrequently:true});x.drawImage(src,0,0,64,64);
+  const d=x.getImageData(0,0,64,64).data,hist=new Array(64).fill(0);let L=0,clip=0,r=0,b=0,sat=0,green=0,sky=0,skin=0;
+  for(let i=0;i<4096;i++){
+    const R=d[i*4]/255,G=d[i*4+1]/255,B=d[i*4+2]/255,l=R*.21+G*.72+B*.07,mx=Math.max(R,G,B),mn=Math.min(R,G,B);
+    L+=l;r+=R;b+=B;sat+=mx>0?(mx-mn)/mx:0;hist[Math.min(63,l*64|0)]++;if(mx>.98&&l>.9)clip++;
+    if(G>R*1.08&&G>B*1.15&&G>.15)green++;
+    if(i<4096*.4&&B>R*1.2&&B>=G*.95&&l>.3)sky++;
+    if(R>G&&G>B&&R-B>.08&&R-B<.45&&R>.3&&G/R>.55&&G/R<.88)skin++;
+  }
+  const pct=q=>{let n=0;for(let i=0;i<64;i++){n+=hist[i];if(n>=q*4096)return (i+.5)/64}return 1};
+  const now={L:L/4096,p10:pct(.1),p90:pct(.9),clip:clip/4096,cast:(r-b)/(r+b+1),sat:sat/4096,green:green/4096,sky:sky/1638,skin:skin/4096};
+  for(const k in now)scene[k]=scene.seen?scene[k]+(now[k]-scene[k])*.35:now[k];
+  scene.seen=true;
+}
+const sunsetNow=()=>scene.cast>.18&&scene.L>.2&&scene.L<.65&&scene.sat>.3;
+const faceNow=()=>AI.faces.length>0||scene.skin>.18;
+function sceneName(){
+  if(scene.L<.2)return ['🌙 Raat','night'];
+  if(sunsetNow())return ['🌇 Shaam','sunset'];
+  if(scene.L<.34)return ['💡 Kam roshni','night'];
+  if(faceNow())return ['🙂 Chehra','selfie'];
+  if(scene.green>.22)return ['🌿 Hariyali','nature'];
+  if(scene.sky>.35)return ['☁️ Aasman','sky'];
+  if(scene.L>.62||scene.clip>.07)return ['☀️ Tez roshni','bright'];
+  return ['📷 Aam scene','travel'];
+}
+// changes the chosen filter so it suits what the camera is looking at
+function adapt(v){
+  const s=scene;let lift=clamp(Math.log2(.46/Math.max(s.L,.04))*.3,-.22,.45);
+  if(s.clip>.05)lift=Math.min(lift,0);
+  if(v.exposure<0&&s.L<.32)v.exposure*=.2;
+  if(v.exposure>0&&s.L>.6)v.exposure*=.2;
+  v.exposure+=lift;
+  if(s.p10<.1)v.shadows+=Math.min(.3,(.1-s.p10)*3);
+  v.highlights-=Math.min(.5,s.clip*4);
+  if(!sunsetNow()){
+    if((s.cast>.12&&v.warmth>0)||(s.cast<-.08&&v.warmth<0))v.warmth*=.4;
+    v.warmth-=clamp(s.cast*.5,-.18,.18);
+  }
+  if(s.sat>.45){v.saturation=v.saturation>0?v.saturation*.4:v.saturation;v.vibrance*=.5}else if(s.sat<.15&&v.saturation>-.5)v.vibrance+=.15;
+  if(s.p90-s.p10<.4)v.contrast+=.15;else if(s.p90-s.p10>.75&&v.contrast>0)v.contrast*=.5;
+  if(faceNow()){v.reds*=.5;v.teal*=.5;v.sharpness*=.4;v.hue*=.3}
+  if(s.L<.28){v.sharpness*=.3;v.vignette*=.35;v.fade*=.5}
+}
+// the values actually drawn: filter x strength, then AI scene and Night mode
+function effective(){
+  const base=cur(),k=comparing?0:strength()/100,v={};
+  for(const [key] of PARAMS)v[key]=(base[key]||0)*k/100;
+  if(comparing)return v;
+  if(S.aiFilter)adapt(v);
+  if(S.night&&!videoMode){const dark=clamp((.5-scene.L)/.35,0,1);v.exposure+=.38*dark;v.shadows+=.3*dark;v.highlights-=.2*dark}
+  for(const [key,,min,max] of PARAMS)v[key]=clamp(v[key],min/100,max/100);
+  return v;
+}
+function nrAmount(w,h){
+  if(S.nr===0)return 0;if(S.nr===2)return .85;
+  const dark=clamp((.42-scene.L)/.3,0,1),big=dark>0&&Math.max(w,h)>=3000?.2:0; // bright pictures are left untouched
+  return S.night&&!videoMode?dark*.9:Math.min(.85,dark*.7+big);
+}
+function autoStyle(){
+  if(scene.L<.3)return 'Bokeh Lights';
+  if(scene.clip>.07||(scene.p90>.85&&scene.p10<.12))return 'Studio';
+  if(sunsetNow())return 'Golden';
+  return faceNow()?'DSLR':'Natural';
+}
+const lookNow=()=>S.portrait.style==='Auto'?{...S.portrait,...LOOK,...STYLES[autoStyle()]}:S.portrait;
 
 /* ---------- on-device AI (MediaPipe), loaded only when needed ---------- */
 const AIBASE='https://kezmocam.invalid/ai/';
-const AI={lib:null,files:null,tasks:{},loading:{},failed:false,mask:null,mw:0,mh:0,faces:[],seen:0,last:{},ts:0,canvas:el('canvas')};
+const AI={mode:window.Worker?'worker':'main',worker:null,workerOK:false,pending:new Map(),id:0,lib:null,tasks:{},busy:{},ready:{},took:{},failed:false,
+mask:null,mw:0,mh:0,off:[0,0],ref:null,gen:0,faces:[],seen:0,last:{},ts:0};
+let aimShown={x:.5,y:.5};
 const MODELS={person:['ImageSegmenter','selfie_segmenter.tflite',{runningMode:'VIDEO',outputConfidenceMasks:true,outputCategoryMask:false}],
+fine:['ImageSegmenter','selfie_multiclass_256x256.tflite',{runningMode:'IMAGE',outputConfidenceMasks:true,outputCategoryMask:false}], // sharper hair and edges, used for saved photos
 object:['InteractiveSegmenter','magic_touch.tflite',{outputConfidenceMasks:true,outputCategoryMask:false}],
 face:['FaceLandmarker','face_landmarker.task',{runningMode:'VIDEO',numFaces:2}]};
-function task(name){
-  if(AI.tasks[name])return AI.tasks[name];
-  if(!AI.loading[name]){
-    say('AI load ho raha hai…');
-    AI.loading[name]=(async()=>{
-      AI.lib=AI.lib||await import(AIBASE+'vision_bundle.mjs');
-      AI.files=AI.files||await AI.lib.FilesetResolver.forVisionTasks(AIBASE+'wasm');
-      const [cls,file,opt]=MODELS[name];
-      AI.tasks[name]=await AI.lib[cls].createFromOptions(AI.files,{baseOptions:{modelAssetPath:AIBASE+file},...opt});
-      say('');
-    })().catch(e=>{console.warn('AI',name,e);AI.failed=true;say('AI is phone par nahi chala, Oval blur use hoga');if(name==='face')say('Face lens is phone par load nahi hua')});
-  }
-  return null;
+// runs one model on one picture (also copied into the worker, so it must not use anything outside itself)
+function infer(task,name,input,ts,point){
+  if(name==='face')return {faces:task.detectForVideo(input,ts).faceLandmarks||[]};
+  let out=null;
+  const done=r=>{
+    const list=r.confidenceMasks,fine=name==='fine',m=fine?list[0]:list[list.length-1],data=m.getAsFloat32Array(),w=m.width,h=m.height,mask=new Uint8Array(w*h);
+    // multiclass model: the first mask is the background. Tap model: the tapped thing must be the sharp side.
+    const flip=fine||(point&&data[Math.min(h-1,Math.floor(point.y*h))*w+Math.min(w-1,Math.floor(point.x*w))]<.5);
+    for(let i=0;i<w*h;i++)mask[i]=(flip?1-data[i]:data[i])*255;
+    out={mask,w,h};if(r.close)r.close();
+  };
+  if(name==='object')task.segment(input,{keypoint:point},done);else if(name==='fine')task.segment(input,done);else task.segmentForVideo(input,ts,done);
+  return out;
 }
-function small(src,w,h){
-  const k=Math.min(1,512/Math.max(w,h)),c=AI.canvas;c.width=Math.round(w*k);c.height=Math.round(h*k);
-  c.getContext('2d').drawImage(src,0,0,c.width,c.height);return c;
-}
-const stamp=()=>AI.ts=Math.max(AI.ts+1,Math.round(performance.now()));
-function takeMask(result,point,smoothing){
-  const list=result.confidenceMasks;if(!list||!list.length)return;
-  const m=list[list.length-1],data=m.getAsFloat32Array(),w=m.width,h=m.height,n=w*h;
-  // the tapped object must be the "keep sharp" side of the mask
-  const invert=point&&data[Math.min(h-1,Math.floor(point.y*h))*w+Math.min(w-1,Math.floor(point.x*w))]<.5;
-  const old=AI.mask&&AI.mw===w&&AI.mh===h?AI.mask:null,out=new Uint8Array(n);let sx=0,sy=0,count=0;
-  for(let i=0;i<n;i++){
-    const a=(invert?1-data[i]:data[i])*255;out[i]=old?a*(1-smoothing)+old[i]*smoothing:a;
-    if(point&&out[i]>127){sx+=i%w;sy+=Math.floor(i/w);count++}
-  }
-  AI.mask=out;AI.mw=w;AI.mh=h;
-  gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,mtex);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,w,h,0,gl.LUMINANCE,gl.UNSIGNED_BYTE,out);gl.activeTexture(gl.TEXTURE0);
-  if(count>n*.003){const cx=Math.floor(sx/count),cy=Math.floor(sy/count);if(out[cy*w+cx]>127){point.x=(cx+.5)/w;point.y=(cy+.5)/h}} // follow the object
-  result.close?.();
-}
-function think(src,w,h,force){
-  const now=performance.now(),due=(n,ms)=>force||now-(AI.last[n]||0)>ms;
-  const need=[];
-  if(S.portrait.on&&!AI.failed&&S.portrait.mode===0)need.push(['person',60]);
-  if(S.portrait.on&&!AI.failed&&S.portrait.mode===1)need.push(['object',650]);
-  if(S.lens!=='None')need.push(['face',45]);
-  for(const [name,every] of need){
-    const t=task(name);if(!t||!due(name,every))continue;
+function aiWorker(){
+  let ready=null,chain=Promise.resolve();const tasks={};
+  onmessage=e=>{const m=e.data;chain=chain.then(async()=>{
     try{
-      const c=small(src,w,h);
-      if(name==='person')t.segmentForVideo(c,stamp(),r=>takeMask(r,null,force?0:.35));
-      else if(name==='object')t.segment(c,{keypoint:{x:aim.x,y:aim.y}},r=>takeMask(r,aim,0));
-      else{AI.faces=t.detectForVideo(c,stamp()).faceLandmarks||[];if(AI.faces.length)AI.seen=now}
-    }catch(e){console.warn('AI',name,e);if(name!=='face'){AI.failed=true;say('AI ruk gaya, Oval blur use hoga')}}
-    AI.last[name]=performance.now();
+      ready=ready||(async()=>{self.exports={};self.module={exports:self.exports};importScripts(m.base+'vision_bundle.cjs');
+        const lib=self.module.exports.FilesetResolver?self.module.exports:self.exports;return {lib,files:await lib.FilesetResolver.forVisionTasks(m.base+'wasm')}})();
+      const {lib,files}=await ready;
+      if(!tasks[m.name]){const [cls,file,opt]=m.model;tasks[m.name]=await lib[cls].createFromOptions(files,{baseOptions:{modelAssetPath:m.base+file},...opt})}
+      const out=infer(tasks[m.name],m.name,m.input,m.ts,m.point);
+      postMessage({id:m.id,out},out.mask?[out.mask.buffer]:[]);
+    }catch(err){postMessage({id:m.id,error:String(err)})}
+    finally{m.input.close()}
+  })};
+}
+function useMainThread(why){console.warn('AI worker unavailable:',why);AI.mode='main';AI.worker?.terminate();AI.worker=null;for(const p of AI.pending.values())p.no(new Error('retry'));AI.pending.clear()}
+function inWorker(name,input,ts,point){
+  if(!AI.worker){
+    try{AI.worker=new Worker(URL.createObjectURL(new Blob([`${infer};(${aiWorker})()`],{type:'text/javascript'})));
+    AI.worker.onmessage=e=>{const p=AI.pending.get(e.data.id);if(!p)return;AI.pending.delete(e.data.id);clearTimeout(p.timer);
+      if(e.data.error){if(!AI.workerOK){p.no(new Error('retry'));useMainThread(e.data.error)}else p.no(new Error(e.data.error))}else{AI.workerOK=true;p.ok(e.data.out)}};
+    AI.worker.onerror=e=>useMainThread(e.message);
+    }catch(e){input.close();useMainThread(e);return Promise.reject(new Error('retry'))}
+  }
+  return new Promise((ok,no)=>{const id=++AI.id,timer=setTimeout(()=>{AI.pending.delete(id);no(new Error('retry'));if(!AI.workerOK)useMainThread('no answer')},45000);
+    AI.pending.set(id,{ok,no,timer});AI.worker.postMessage({id,name,input,ts,point,base:AIBASE,model:MODELS[name]},[input])});
+}
+async function inPage(name,input,ts,point){
+  try{
+    AI.lib=AI.lib||(async()=>{const lib=await import(AIBASE+'vision_bundle.mjs');return {lib,files:await lib.FilesetResolver.forVisionTasks(AIBASE+'wasm')}})();
+    const {lib,files}=await AI.lib,[cls,file,opt]=MODELS[name];
+    AI.tasks[name]=AI.tasks[name]||lib[cls].createFromOptions(files,{baseOptions:{modelAssetPath:AIBASE+file},...opt});
+    return infer(await AI.tasks[name],name,input,ts,point);
+  }finally{input.close()}
+}
+async function ask(name,src,w,h,point){
+  const k=Math.min(1,512/Math.max(w,h));
+  const input=await createImageBitmap(src,{resizeWidth:Math.round(w*k),resizeHeight:Math.round(h*k)});
+  AI.ts=Math.max(AI.ts+1,Math.round(performance.now()));
+  return (AI.mode==='worker'?inWorker:inPage)(name,input,AI.ts,point);
+}
+function setMask(mask,w,h){
+  AI.mask=mask;AI.mw=w;AI.mh=h;
+  gl.activeTexture(gl.TEXTURE2);gl.bindTexture(gl.TEXTURE_2D,mtex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,w,h,0,gl.LUMINANCE,gl.UNSIGNED_BYTE,mask);gl.activeTexture(gl.TEXTURE0);
+}
+function takeMask(out,point,smoothing){
+  const {mask,w,h}=out,old=AI.mask&&AI.mw===w&&AI.mh===h?AI.mask:null;let sx=0,sy=0,count=0;
+  for(let i=0;i<w*h;i++){
+    if(old)mask[i]=mask[i]*(1-smoothing)+old[i]*smoothing;
+    if(mask[i]>127){sx+=i%w;sy+=Math.floor(i/w);count++}
+  }
+  setMask(mask,w,h);
+  if(count>w*h*.003){
+    const cx=Math.floor(sx/count),cy=Math.floor(sy/count),c={x:(cx+.5)/w,y:(cy+.5)/h};aimShown=c;
+    if(point&&mask[cy*w+cx]>127)aim={...c}; // follow the object
   }
 }
-const forgetAI=()=>{AI.mask=null;AI.faces=[];AI.last={};aim={x:.5,y:.5}};
+function think(src,w,h){
+  const now=performance.now(),need=[];
+  if(S.portrait.on&&!AI.failed&&S.portrait.mode===0)need.push(['person',50]);
+  if(S.portrait.on&&!AI.failed&&S.portrait.mode===1)need.push(['object',200]);
+  if(S.lens!=='None')need.push(['face',40]);
+  for(const [name,every] of need){
+    // if the AI has to run on the main thread, leave the camera at least twice the time it takes
+    const gap=AI.mode==='main'?Math.max(every,(AI.took[name]||0)*2):every;
+    if(AI.busy[name]||now-(AI.last[name]||0)<gap)continue;
+    AI.busy[name]=true;const gen=AI.gen,ref=name==='face'?null:smallGrey(src),began=performance.now();
+    if(!AI.ready[name])say('AI load ho raha hai…');
+    ask(name,src,w,h,name==='object'?{...aim}:null).then(out=>{
+      if(!AI.ready[name]){AI.ready[name]=true;if($('msg').textContent.startsWith('AI load'))say('')}
+      if(gen!==AI.gen||busy)return; // a photo being saved uses its own, finer answer
+      if(name==='face'){AI.faces=out.faces;if(out.faces.length)AI.seen=performance.now()}
+      else if(S.portrait.on){takeMask(out,name==='object'?aim:null,name==='person'?.2:0);AI.ref=ref;AI.off=[0,0]}
+    }).catch(e=>{
+      if(e.message==='retry')return;
+      console.warn('AI',name,e);
+      if(name==='face')say('Face lens is phone par load nahi hua');else{AI.failed=true;say('AI is phone par nahi chala, Oval blur use hoga')}
+    }).finally(()=>{AI.busy[name]=false;AI.took[name]=performance.now()-began;AI.last[name]=performance.now()});
+  }
+}
+const forgetAI=()=>{AI.gen++;AI.mask=null;AI.faces=[];AI.last={};AI.off=[0,0];AI.ref=null;aim={x:.5,y:.5};aimShown={x:.5,y:.5}};
 
 /* ---------- face lenses ---------- */
 const WARPS={'Big Eyes':[['eyes',.17,.42]],'Alien Eyes':[['eyes',.25,.6]],'Big Mouth':[['mouth',.38,.45]],'Funny Nose':[['nose',.28,.55]],'Slim Face':[['jaw',.42,-.2]],'Tiny Face':[['nose',.95,-.4]]};
@@ -492,18 +657,24 @@ function drawLens(x,W,H,t){
 const MARGIN=.07,SW=96,SH=96,R=7;
 const steady={cx:0,cy:0,px:0,py:0,sx:0,sy:0,prev:null,canvas:el('canvas',{width:SW,height:SH})};
 function resetSteady(){Object.assign(steady,{cx:0,cy:0,px:0,py:0,sx:0,sy:0,prev:null})}
-function shift(a,b){ // how far picture b moved compared with a, in small-frame pixels
-  const score=(dx,dy)=>{let s=0;for(let y=R;y<SH-R;y+=2)for(let x=R;x<SW-R;x+=2)s+=Math.abs(b[(y+dy)*SW+x+dx]-a[y*SW+x]);return s};
+function shift(a,b,keep){ // how far picture b moved compared with a, in small-frame pixels
+  const at=[];for(let y=R;y<SH-R;y+=2)for(let x=R;x<SW-R;x+=2)if(!keep||keep(x,y))at.push(y*SW+x);
+  if(at.length<60)return [0,0];
+  const score=(dx,dy)=>{let s=0;const d=dy*SW+dx;for(const i of at)s+=Math.abs(b[i+d]-a[i]);return s};
   const zero=score(0,0);let best=zero,bx=0,by=0;
   for(let dy=-R;dy<=R;dy++)for(let dx=-R;dx<=R;dx++){const s=score(dx,dy);if(s<best){best=s;bx=dx;by=dy}}
   if(best>zero*.9)return [0,0]; // not clearly better than standing still
   const fine=(m,c,p)=>{const d=m-2*c+p;return d>0?clamp((m-p)/(2*d),-.5,.5):0};
   return [bx+(Math.abs(bx)<R?fine(score(bx-1,by),best,score(bx+1,by)):0),by+(Math.abs(by)<R?fine(score(bx,by-1),best,score(bx,by+1)):0)];
 }
-function stabilise(){
-  const x=steady.canvas.getContext('2d',{willReadFrequently:true});x.drawImage(video,0,0,SW,SH);
+function smallGrey(src){
+  const x=steady.canvas.getContext('2d',{willReadFrequently:true});x.drawImage(src,0,0,SW,SH);
   const d=x.getImageData(0,0,SW,SH).data,grey=new Float32Array(SW*SH);
   for(let i=0;i<grey.length;i++)grey[i]=d[i*4]*.3+d[i*4+1]*.6+d[i*4+2]*.1;
+  return grey;
+}
+function stabilise(){
+  const grey=smallGrey(video);
   if(steady.prev){
     const [dx,dy]=shift(steady.prev,grey),follow=.35-.32*S.steadyAmt/100;
     for(const [p,s,c,d2,n] of [['px','sx','cx',dx,SW],['py','sy','cy',dy,SH]]){
@@ -513,15 +684,25 @@ function stabilise(){
   }
   steady.prev=grey;
 }
-let lastTime=-1;
+// between two AI answers, slide the mask along with the moving subject
+function trackMask(){
+  if(!S.portrait.on||!AI.mask||!AI.ref)return;
+  const keep=(x,y)=>AI.mask[Math.floor(y/SH*AI.mh)*AI.mw+Math.floor(x/SW*AI.mw)]>127;
+  const [dx,dy]=shift(AI.ref,smallGrey(video),keep);AI.off=[dx/SW,-dy/SH];
+}
+let lastTime=-1,frames=0;
 function loop(){
   requestAnimationFrame(loop);
   if(!stream||paused||busy||video.readyState<2||!video.videoWidth)return;
-  if(S.steady&&video.currentTime!==lastTime)stabilise();
-  lastTime=video.currentTime;
+  const fresh=video.currentTime!==lastTime;lastTime=video.currentTime;frames++;
+  if(rec&&rec.direct&&frames%4)return; // recording straight from the camera: keep the preview light
+  const now=performance.now();if(now-scene.at>350){scene.at=now;analyse(video);if(frames%3===0||!scene.shown)info()}
+  if(S.steady&&fresh)stabilise();
+  if(fresh)trackMask();
   think(video,video.videoWidth,video.videoHeight);
-  if(S.lens!=='None'&&AI.tasks.face){const none=performance.now()-AI.seen>1500;if(none)say('Chehra camera ke saamne lao');else if($('msg').textContent.startsWith('Chehra'))say('')}
+  if(S.lens!=='None'&&AI.ready.face){const none=now-AI.seen>1500;if(none)say('Chehra camera ke saamne lao');else if($('msg').textContent.startsWith('Chehra'))say('')}
   render(video,video.videoWidth,video.videoHeight);
+  if(rec&&recTilt){turned(view,recTilt,recCanvas);drawMark(recCanvas.getContext('2d'),recCanvas.width,recCanvas.height)}
 }
 
 /* ---------- camera ---------- */
@@ -529,14 +710,22 @@ function stop(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=track=n
 async function start(){
   if(paused)return;if(starting){restart=true;return}
   starting=true;stop();resetSteady();forgetAI();$('zoom').hidden=true;say('Camera khul raha hai…');
-  const [,w,h]=RES[S.res],want={facingMode:facing,width:{ideal:w},height:{ideal:h},frameRate:{ideal:S.fps}};
+  const asked=openedRes=camRes();
+  const open=async res=>{
+    const [,w,h]=RES[res],want={facingMode:facing,width:{ideal:w},height:{ideal:h},frameRate:{ideal:S.fps}};
+    try{return await navigator.mediaDevices.getUserMedia({video:want,audio:videoMode?{echoCancellation:true,noiseSuppression:true}:false})}
+    catch(e){if(!videoMode||e.name==='NotAllowedError')throw e;return navigator.mediaDevices.getUserMedia({video:want})}
+  };
   try{
     let s;
-    try{s=await navigator.mediaDevices.getUserMedia({video:want,audio:videoMode?{echoCancellation:true,noiseSuppression:true}:false})}
-    catch(e){if(!videoMode)throw e;s=await navigator.mediaDevices.getUserMedia({video:want})}
+    try{s=await open(asked)}catch(e){if(asked<2||e.name==='NotAllowedError')throw e;s=await open(1);can4K[facing]=false}
     stream=s;track=s.getVideoTracks()[0];video.srcObject=s;await video.play().catch(()=>{});
     $('perm').hidden=true;say('');
     if(paused)stop();
+    const c=caps(),got=track?.getSettings()||{};
+    if(c.width?.max&&c.height?.max)can4K[facing]=Math.max(c.width.max,c.height.max)>=3840&&Math.min(c.width.max,c.height.max)>=2160;
+    if(videoMode&&S.res===2&&Math.max(got.width,got.height)<3000)say(`Is camera ne 4K nahi diya, ${got.width}×${got.height} chal raha hai`);
+    more();
     // some phones report torch and zoom a moment after the camera opens
     for(const wait of [300,1200])setTimeout(async()=>{if(track===s.getVideoTracks()[0]){await applyHardware();info();zoomBar();if(wait>1000&&tab==='Camera')panel()}},wait);
   }catch(e){
@@ -559,8 +748,10 @@ function applyHardware(){
   });
 }
 function info(){
-  if(!track)return;const s=track.getSettings();
-  $('info').textContent=`${s.width||'?'}×${s.height||'?'} • ${Math.round(s.frameRate||0)} fps${S.steady?' • Steady':''}${S.portrait.on?' • Portrait':''}${S.lens!=='None'?' • '+S.lens:''} • ${S.preset}`;
+  if(!track)return;const s=track.getSettings();scene.shown=scene.seen;
+  $('info').textContent=[videoMode?`${s.width}×${s.height} • ${Math.round(s.frameRate||0)} fps`:S.night?'Night':S.hdPhoto&&!hdBroken&&window.ImageCapture?'HD photo':`${s.width}×${s.height}`,
+    rec&&rec.direct?'Direct (poori quality)':S.preset,S.aiFilter?'AI '+sceneName()[0]:'',S.steady?'Steady':'',S.portrait.on?(S.portrait.style==='Auto'?'Auto: '+autoStyle():S.portrait.style):'',
+    S.lens!=='None'?S.lens:'',S.ui.rotate&&tilt?'↻ aadi photo':''].filter(Boolean).join(' • ');
 }
 $('torch').onclick=async()=>{
   if(!track)return;
@@ -583,44 +774,119 @@ async function save(blob,name){
 const queue=(b,n)=>saving=saving.then(()=>save(b,n)).catch(()=>say('Save nahi hua ❌'));
 const wait=(p,ms)=>Promise.race([p,new Promise((_,no)=>setTimeout(()=>no(new Error('timeout')),ms))]);
 async function fullPhoto(){ // the sensor's own still picture, much sharper than a video frame
-  if(!S.hdPhoto||!window.ImageCapture)return null;
+  if(!S.hdPhoto||hdBroken||!window.ImageCapture)return null;
   try{
     const ic=new ImageCapture(track),pc=await wait(ic.getPhotoCapabilities(),1500).catch(()=>null),opt={};
     if(pc?.imageWidth?.max){opt.imageWidth=pc.imageWidth.max;opt.imageHeight=pc.imageHeight.max}
     if(torchOn){if(!pc?.fillLightMode?.includes('flash'))return null;opt.fillLightMode='flash'}
     const blob=await wait(ic.takePhoto(opt),6000).catch(()=>wait(ic.takePhoto(),6000));
-    let bmp=await createImageBitmap(blob);
-    if((bmp.width>bmp.height)!==(video.videoWidth>video.videoHeight))return null; // turned sideways
-    const k=Math.min(1,Math.min(4096,gl.getParameter(gl.MAX_TEXTURE_SIZE))/Math.max(bmp.width,bmp.height));
+    const max=Math.min(4096,gl.getParameter(gl.MAX_TEXTURE_SIZE));let bmp=await createImageBitmap(blob);
+    const k=Math.min(1,max/Math.max(bmp.width,bmp.height));
     if(k<1)bmp=await createImageBitmap(blob,{resizeWidth:Math.round(bmp.width*k),resizeHeight:Math.round(bmp.height*k),resizeQuality:'high'});
-    return bmp;
-  }catch(e){return null}
+    // must go through a canvas: WebGL would take an ImageBitmap upside down
+    const c=el('canvas',{width:bmp.width,height:bmp.height});c.getContext('2d').drawImage(bmp,0,0);bmp.close();return c;
+  }catch(e){console.warn('still',e);hdBroken=true;return null}
+}
+// Some phones hand over the still picture rotated or mirrored. Compare it with the preview and turn it to match.
+function upright(still){
+  const vw=video.videoWidth,vh=video.videoHeight,ratio=vw/vh,c=el('canvas',{width:48,height:48}),x=c.getContext('2d',{willReadFrequently:true});
+  const grey=()=>{const d=x.getImageData(0,0,48,48).data,g=new Float32Array(2304);let m=0;for(let i=0;i<2304;i++){g[i]=d[i*4]*.3+d[i*4+1]*.6+d[i*4+2]*.1;m+=g[i]}
+    m/=2304;let n=0;for(let i=0;i<2304;i++){g[i]-=m;n+=g[i]*g[i]}n=Math.sqrt(n)||1;return g.map(a=>a/n)};
+  x.drawImage(video,0,0,48,48);const ref=grey(),tries=[];
+  for(const flip of [1,-1])for(const deg of [0,90,180,-90]){
+    const side=Math.abs(deg)===90,W=side?still.height:still.width,H=side?still.width:still.height;
+    if((W>H)!==(vw>vh))continue;
+    const cw=Math.min(W,H*ratio),ch=cw/ratio;
+    x.save();x.clearRect(0,0,48,48);x.translate(24,24);x.scale(48/cw*flip,48/ch);x.rotate(deg*Math.PI/180);x.drawImage(still,-still.width/2,-still.height/2);x.restore();
+    const g=grey();let score=0;for(let i=0;i<2304;i++)score+=g[i]*ref[i];
+    tries.push({deg,flip,score,W,H});
+  }
+  if(!tries.length)return null;
+  let best=tries.reduce((a,b)=>b.score>a.score?b:a);const same=tries.find(t=>t.deg===0&&t.flip===1);
+  if(same&&best.score-same.score<.12)best=same;
+  if(best.deg===0&&best.flip===1)return still;
+  if(best.score<.4)return null; // cannot tell which way is up: use the preview frame instead
+  const out=el('canvas',{width:best.W,height:best.H}),o=out.getContext('2d');
+  o.translate(best.W/2,best.H/2);o.scale(best.flip,1);o.rotate(best.deg*Math.PI/180);o.drawImage(still,-still.width/2,-still.height/2);return out;
+}
+const nextFrame=()=>new Promise(done=>{let over=false;const go=()=>{if(!over){over=true;done()}};video.requestVideoFrameCallback?.(go);setTimeout(go,90)});
+async function stackFrames(count=10){ // Night mode: average several frames, which removes real sensor noise
+  const w=video.videoWidth,h=video.videoHeight,out=el('canvas',{width:w,height:h}),x=out.getContext('2d');let first=null;
+  for(let i=0;i<count;i++){
+    await nextFrame();
+    const g=smallGrey(video),[dx,dy]=first?shift(first,g):[0,0];first=first||g;
+    x.globalAlpha=1/(i+1);x.drawImage(video,-dx/SW*w,-dy/SH*h,w,h);
+  }
+  return out;
 }
 async function photo(){
   if(busy||!stream)return;
-  busy=true;say('Photo le raha hai… phone seedha rakho');click();
+  busy=true;const night=S.night;say(night?'Night photo… phone bilkul seedha pakdo':'Photo le raha hai… phone seedha rakho');click();
+  const turn=S.ui.rotate?tilt:0,keep={mask:AI.mask,mw:AI.mw,mh:AI.mh,faces:AI.faces,aim:aimShown};
+  let changed=false;
   try{
-    const g=geometry(video.videoWidth,video.videoHeight,0,1e9),ratio=g.W/g.H,hd=await fullPhoto();
-    const src=hd||video,w=hd?hd.width:video.videoWidth,h=hd?hd.height:video.videoHeight,out=el('canvas');
-    if(hd){AI.mask=null;think(hd,w,h,true)}
-    render(src,w,h,{target:out,still:true,ratio});
-    if(hd){AI.mask=null;AI.faces=[];AI.last={};applyHardware()}
+    const vw=video.videoWidth,vh=video.videoHeight,g=geometry(vw,vh,0,1e9),ratio=g.W/g.H;
+    let src=night?await stackFrames():await fullPhoto();
+    if(src&&!night)src=upright(src);
+    if(!src&&(S.portrait.on||S.lens!=='None')){src=el('canvas',{width:vw,height:vh});src.getContext('2d').drawImage(video,0,0)}
+    if(src){ // run the AI again on the saved picture itself, so edges line up
+      try{
+        const jobs=[];
+        if(S.portrait.on&&!AI.failed&&S.portrait.mode===0)jobs.push(wait(ask('fine',src,src.width,src.height),12000).catch(()=>wait(ask('person',src,src.width,src.height),6000)).then(o=>{changed=true;takeMask(o,null,0)}));
+        if(S.portrait.on&&!AI.failed&&S.portrait.mode===1)jobs.push(wait(ask('object',src,src.width,src.height,{...aim}),8000).then(o=>{changed=true;takeMask(o,null,0)}));
+        if(S.lens!=='None')jobs.push(wait(ask('face',src,src.width,src.height),8000).then(o=>{changed=true;AI.faces=o.faces}));
+        await Promise.all(jobs);
+      }catch(e){console.warn('still AI',e);src=null;if(changed&&keep.mask){setMask(keep.mask,keep.mw,keep.mh);AI.faces=keep.faces}}
+    }
+    let out=el('canvas');
+    render(src||video,src?src.width:vw,src?src.height:vh,{target:out,still:true,ratio,mark:false});
+    out=turn?turned(out,turn):out;drawMark(out.getContext('2d'),out.width,out.height);
     await new Promise(done=>out.toBlob(b=>{if(b)queue(b,'Kezmo_'+Date.now()+'.jpg');else say('Photo nahi bani');done()},'image/jpeg',S.jpeg/100));
   }catch(e){console.warn(e);say('Photo nahi bani')}
+  if(changed){if(keep.mask)setMask(keep.mask,keep.mw,keep.mh);else AI.mask=null;AI.faces=keep.faces;aimShown=keep.aim;AI.last={}}
   busy=false;
+  if(hdBroken&&openedRes!==camRes())start();else applyHardware();
 }
-function lock(on){for(const b of [...$('modes').children,$('flip'),$('resetTop'),$('resetLow')])if(b)b.disabled=on;quick();panel()}
+function lock(on){for(const b of [...$('modes').children,$('flip'),$('resetTop'),$('resetLow')])if(b)b.disabled=on;$('side').hidden=on&&rec?.direct;quick();panel()}
+let recTilt=0;const recCanvas=el('canvas');
+// nothing to draw on the picture: the camera can be recorded directly, at full quality and without lag
+const isPlain=type=>S.preset==='Normal'&&!S.edits.Normal&&!S.aiFilter&&S.nr!==2&&S.lens==='None'&&!S.portrait.on&&S.aspect===0&&!S.watermark&&!S.steady&&!(facing==='user'&&S.mirror)&&(!(S.ui.rotate&&tilt)||type==='video/mp4');
+// turns an MP4 without re-encoding: only the "how to display" matrix in the track header is changed
+async function turnMp4(blob,deg){
+  const bytes=new Uint8Array(await blob.arrayBuffer()),view=new DataView(bytes.buffer);
+  for(let i=4;i+96<bytes.length;i++){
+    if(bytes[i]!==116||bytes[i+1]!==107||bytes[i+2]!==104||bytes[i+3]!==100)continue; // "tkhd"
+    const size=view.getUint32(i-4),version=bytes[i+4];if(size!==(version?104:92))continue;
+    const m=i+4+(version?36:24)+16;if(!view.getUint32(m+36))continue; // sound tracks have no width
+    const old=Math.atan2(view.getInt32(m+4),view.getInt32(m)),a=old+deg*Math.PI/180,c=Math.round(Math.cos(a))*65536,s=Math.round(Math.sin(a))*65536;
+    [c,s,0,-s,c,0,0,0,0x40000000].forEach((x,k)=>view.setInt32(m+k*4,x));
+    return new Blob([bytes],{type:blob.type});
+  }
+  return blob;
+}
 function record(){
-  rec=true;render(video,video.videoWidth,video.videoHeight); // switch to full size before the stream starts
-  const out=view.captureStream(S.fps);stream.getAudioTracks().forEach(t=>out.addTrack(t.clone()));
-  const type=['video/mp4','video/webm'].find(t=>MediaRecorder.isTypeSupported(t)),parts=[];
-  rec=new MediaRecorder(out,{mimeType:type,videoBitsPerSecond:[8e6,16e6,40e6][S.res]});
-  rec.ondataavailable=e=>{if(e.data.size)parts.push(e.data)};
-  rec.onstop=()=>{out.getTracks().forEach(t=>t.stop());queue(new Blob(parts,{type}),'Kezmo_'+Date.now()+(type.endsWith('mp4')?'.mp4':'.webm'))};
-  const began=Date.now();rec.timer=setInterval(()=>say('● '+new Date(Date.now()-began).toISOString().slice(14,19)),500);
-  rec.start(1000);$('shot').classList.add('rec');say('● 00:00');lock(true);
+  const type=['video/mp4','video/webm'].find(t=>MediaRecorder.isTypeSupported(t)),direct=isPlain(type),set=track.getSettings(),turn=S.ui.rotate?tilt:0,parts=[];
+  let out;recTilt=!direct&&S.ui.rotate?tilt:0;
+  if(direct)out=new MediaStream([track.clone()]);
+  else{
+    rec=true;render(video,video.videoWidth,video.videoHeight); // switch to full size before the stream starts
+    if(recTilt){turned(view,recTilt,recCanvas);out=recCanvas.captureStream(S.fps)}else out=view.captureStream(S.fps);
+  }
+  stream.getAudioTracks().forEach(t=>out.addTrack(t.clone()));
+  const long=Math.max(set.width||0,set.height||0),r=new MediaRecorder(out,{mimeType:type,videoBitsPerSecond:long>=3000?45e6:long>=1900?18e6:10e6});
+  r.direct=direct;
+  r.ondataavailable=e=>{if(e.data.size)parts.push(e.data)};
+  r.onerror=()=>{say('Is phone par ye quality record nahi hui, 1080p try karo');stopRec()};
+  r.onstop=async()=>{out.getTracks().forEach(t=>t.stop());if(!parts.length)return;let blob=new Blob(parts,{type});
+    if(direct&&turn)blob=await turnMp4(blob,turn).catch(()=>blob);
+    queue(blob,'Kezmo_'+Date.now()+(type.endsWith('mp4')?'.mp4':'.webm'))};
+  try{r.start(1000)}catch(e){rec=null;out.getTracks().forEach(t=>t.stop());say('Recording shuru nahi hui, quality 1080p karke try karo');return}
+  rec=r;const began=Date.now(),heavy=!direct&&long>=3000?' • 4K + effect bhaari hai':'';
+  r.timer=setInterval(()=>say('● '+new Date(Date.now()-began).toISOString().slice(14,19)+heavy),500);
+  if(direct)showSheet(false);
+  $('shot').classList.add('rec');say('● 00:00'+heavy);lock(true);info();
 }
-function stopRec(){if(!rec)return;clearInterval(rec.timer);rec.stop();rec=null;$('shot').classList.remove('rec');lock(false)}
+function stopRec(){if(!rec)return;clearInterval(rec.timer);if(rec.state!=='inactive')rec.stop();rec=null;recTilt=0;$('shot').classList.remove('rec');lock(false);info()}
 function cancelTimer(){clearInterval(countdown);countdown=0;$('count').textContent=''}
 $('shot').onclick=()=>{
   if(!stream||!video.videoWidth){start();return}
@@ -631,7 +897,7 @@ $('shot').onclick=()=>{
   let n=S.timer;$('count').textContent=n;
   countdown=setInterval(()=>{if(--n>0)$('count').textContent=n;else{cancelTimer();if(stream)go()}},1000);
 };
-$('flip').onclick=()=>{cancelTimer();facing=facing==='user'?'environment':'user';S.facing=facing;point=null;persist();start()};
+$('flip').onclick=()=>{cancelTimer();facing=facing==='user'?'environment':'user';S.facing=facing;point=null;hdBroken=false;persist();start()};
 
 /* ---------- controls ---------- */
 const ICONS={torch:'<path d="M13 2 4 14h7l-1 8 9-12h-7z"/>',
@@ -643,7 +909,11 @@ Lens:'<circle cx="12" cy="12" r="9"/><path d="M8.500 14.500q3.500 3.500 7 0M9 9.
 Portrait:'<circle cx="12" cy="9" r="4"/><path d="M4.500 21c1-4.500 4-6 7.500-6s6.500 1.500 7.500 6"/>',
 Camera:'<circle cx="12" cy="12" r="9"/><path d="m12 3 4 7M21 12h-8M16.500 19.800l-4-7M12 21l-4-7M3 12h8M7.500 4.200l4 7"/>',
 eye:'<path d="M2 12s3.500-6.500 10-6.500S22 12 22 12s-3.500 6.500-10 6.500S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
-close:'<path d="M6 6l12 12M18 6 6 18"/>',back:'<path d="m15 5-7 7 7 7"/>'};
+close:'<path d="M6 6l12 12M18 6 6 18"/>',
+grid:'<path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>',level:'<circle cx="12" cy="12" r="6"/><path d="M2 12h20"/>',mark:'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 15h6"/>',
+sound:'<path d="M4 9v6h4l5 4V5L8 9zM16.500 8.500q3 3.500 0 7"/>',hd:'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 9v6M11 9v6M7 12h4M14 9v6h1q3-0 3-3t-3-3z"/>',
+ai:'<path d="M11 4l1.800 5.200L18 11l-5.200 1.800L11 18l-1.800-5.200L4 11l5.200-1.800zM19 3v4M17 5h4"/>',noise:'<path d="M5 5h.1M12 5h.1M19 5h.1M8.500 9h.1M15.500 9h.1M5 13h.1M12 13h.1M19 13h.1M4 19q4-5 8 0t8 0"/>',
+glass:'<path d="M12 3s6.500 7 6.500 11.500a6.500 6.500 0 0 1-13 0C5.500 10 12 3 12 3z"/><path d="M9 15q.5 2.500 3 3"/>',back:'<path d="m15 5-7 7 7 7"/>'};
 const icon=n=>`<svg viewBox="0 0 24 24">${ICONS[n]}</svg>`;
 function chip(text,on,click){return el('button',{textContent:text,className:on?'on':'',onclick:click})}
 const iconButton=(name,label,props={})=>{const b=el('button',{className:'round g',...props});b.innerHTML=icon(name);b.setAttribute('aria-label',label);return b};
@@ -652,28 +922,50 @@ function slider(label,min,max,value,set,step=1){
   input.oninput=()=>{out.textContent=input.value;set(+input.value);persist()};
   return el('label',{},el('span',{textContent:label}),input,out);
 }
-const refresh=()=>{persist();sync();quick();panel();more()};
+const refresh=()=>{persist();sync();quick();panel();more();if(stream&&!rec&&!busy&&openedRes!==camRes())start()};
 const choices=(title,names,current,pick)=>el('div',{className:'row'},el('span',{textContent:title}),...names.map((n,i)=>chip(n,i===current,()=>{pick(i);refresh()})));
 const toggle=(title,on,set)=>choices(title,['Off','On'],on?1:0,i=>set(!!i));
 const note=t=>el('div',{className:'note',textContent:t});
 function pick(name){S.preset=name;persist();info();panel()}
+// search words (Hindi and English) -> filters that really suit that kind of picture
+const WORDS={night:'night raat rat dark andhera',selfie:'selfie chehra face portrait skin',nature:'nature hariyali ped jungle pahad mountain landscape green grass',
+sky:'sky aasman asman cloud badal',sunset:'sunset shaam sham sunrise subah golden',flower:'flower phool ful garden lotus kamal',food:'food khana',
+travel:'travel street city shahar ghumna',vintage:'vintage old purana retro film',cinema:'cinema cinematic movie film',bw:'bw black white mono kala safed',
+water:'water paani pani sea lake river nadi samundar',rain:'rain barish baarish monsoon',winter:'winter snow barf thand sardi',indoor:'indoor ghar room kamra cafe',bright:'bright ujala roshni light dhoop'};
+const GOOD={night:['Night','Night City','Bright','Cyberpunk','Neon','HDR Pop','Midnight','Cine Teal'],selfie:['Selfie Bright','Skin Glow','Soft Portrait','Peach','Rosy','Glow Up','Milky','Bright'],
+nature:['Himalaya','Fresh Green','Lotus Vivid','Tropical','Emerald','HDR Pop','Dark Forest','Monsoon'],sky:['Blue Sky','Himalaya','Lotus Vivid','HDR Pop','Aqua'],
+sunset:['Golden Hour','Sunset Haze','Sunkissed','Honey','Warm','Orange Teal','Desert'],flower:['Flower Pop','Lotus Vivid','Cherry Blossom','Pink Dream','Candy','Fresh Green'],
+food:['Warm','Honey','Caramel','Coffee','Crisp','Bright'],travel:['Rich Street','Orange Teal','Cine Teal','HDR Pop','Himalaya','Tropical','Polaroid'],
+vintage:['Vintage 90s','Retro Fade','Film Classic','Polaroid','Disposable','Sepia','Matte'],cinema:['Cine Teal','Orange Teal','Rich Street','Moody','LOG Cinema','Deep Lake'],
+bw:['B&W','B&W Hard','B&W Soft','Noir','Silver','Sepia'],water:['Deep Lake','Aqua','Blue Sky','Himalaya','Cool'],rain:['Monsoon','Moody','Deep Lake','Dark Forest'],
+winter:['Winter','Ice','Cool','Silver'],indoor:['Bright','Warm','Coffee','Caramel','Selfie Bright'],bright:['Bright','Crisp','HDR Pop','Selfie Bright','Pastel','Milky']};
+function find(names,text){
+  const q=text.trim().toLowerCase();if(!q)return names;
+  const words=q.split(/\s+/).filter(w=>w.length>1);
+  const kinds=Object.keys(WORDS).filter(k=>WORDS[k].split(' ').some(s=>words.some(w=>s.startsWith(w))));
+  const exact=names.filter(n=>n.toLowerCase()===q),suited=kinds.flatMap(k=>GOOD[k]).filter(n=>names.includes(n));
+  return [...new Set([...exact,...suited,...names.filter(n=>n.toLowerCase().includes(q))])];
+}
 const filterNames=()=>[...Object.keys(PRESETS),...Object.keys(custom)];
 const resetFilter=()=>{delete S.edits[S.preset];delete S.strengths[S.preset];persist();panel();say(S.preset+' filter asli setting par')};
 function searchList(names,current,choose){
   const row=el('div',{className:'row'+(query?' wrap':'')}),fill=()=>{
-    const found=names.filter(n=>n.toLowerCase().includes(query.trim().toLowerCase()));
+    const found=find(names,query);
     row.className='row'+(query?' wrap':'');row.textContent='';
     row.append(...found.map(n=>chip((S.edits[n]&&names.includes('Normal')?'✎ ':'')+n,current()===n,()=>choose(n))));
     if(!found.length)row.append(note('Kuch nahi mila'));
   };
-  const input=el('input',{type:'search',placeholder:`🔍 Search (${names.length})`,value:query});
+  const input=el('input',{type:'search',placeholder:names.includes('Normal')?`🔍 Search: night, shaam, phool, selfie…`:`🔍 Search (${names.length})`,value:query});
   input.oninput=()=>{query=input.value;fill()};fill();return [input,row];
 }
 function panel(){
   const p=$('panel'),keep=p.dataset.tab===tab?[p.scrollTop,p.querySelector('.row')?.scrollLeft]:[0,0];p.dataset.tab=tab;p.textContent='';
   const filterReset=()=>chip('↺ Is filter ko reset',false,resetFilter);
   if(tab==='Filters'){
-    p.append(...searchList(filterNames(),()=>S.preset,pick),
+    const [label,kind]=sceneName();
+    p.append(flick('✨ AI scene','Filter ko aapke scene ke hisaab se apne aap badalta hai',S.aiFilter,x=>S.aiFilter=x),
+      el('div',{className:'row',id:'suggest'},el('span',{textContent:label+' ke liye'}),...GOOD[kind].slice(0,5).map(n=>chip(n,S.preset===n,()=>pick(n)))),
+      ...searchList(filterNames(),()=>S.preset,pick),
       slider('Filter strength',0,100,strength(),x=>S.strengths[S.preset]=x),
       el('div',{className:'row'},chip('✎ Adjust '+S.preset,false,()=>openTab('Adjust')),filterReset(),chip('★ Copy save karo',false,()=>{
         let i=1;while(custom['Mera '+i])i++;
@@ -687,11 +979,14 @@ function panel(){
     p.append(...searchList(LENS_NAMES,()=>S.lens,n=>{S.lens=n;AI.seen=performance.now();if(n==='None')say('');persist();info();panel()}),
       note('Face lens: chehra saamne rakho. Puppy aur Rainbow me muh kholo.'));
   }else if(tab==='Portrait'){
-    p.append(toggle('Portrait mode',S.portrait.on,x=>{S.portrait.on=x;forgetAI()}),
-      choices('Pehchan',MODES,S.portrait.mode,i=>{S.portrait.mode=i;AI.failed=false;AI.loading={};forgetAI()}),
-      note(S.portrait.mode===0?'AI insaan ko pehchan kar peeche blur karta hai.':S.portrait.mode===1?'Jis cheez ko sharp rakhna hai us par screen par tap karo.':'Gol area ke bahar blur. Tap karke jagah badlo.'),
-      ...PORTRAIT.filter(q=>S.portrait.mode===2||!q[0].startsWith('size')).map(([k,label,min,max])=>slider(label,min,max,S.portrait[k],x=>S.portrait[k]=x)),
-      el('div',{className:'row'},chip('↺ Portrait reset',false,()=>{S.portrait={...defaultsLow().portrait,on:S.portrait.on,mode:S.portrait.mode};forgetAI();persist();panel()})));
+    const P=S.portrait,shownLook=lookNow(),style=name=>{S.portrait={...P,...(name==='Auto'?{}:{...LOOK,...STYLES[name]}),style:name,on:true};if(!P.on)forgetAI();refresh()};
+    p.append(toggle('Portrait mode',P.on,x=>{P.on=x;if(x){S.night=false}forgetAI()}),
+      el('div',{className:'row',id:'styles'},...['Auto',...Object.keys(STYLES)].map(n=>chip(n==='Auto'?'✨ Auto':n,P.style===n,()=>style(n)))),
+      choices('Pehchan',MODES,P.mode,i=>{P.mode=i;AI.failed=false;forgetAI()}),
+      note(P.mode===0?'AI insaan ko pehchan kar peeche blur karta hai. Saved photo me kinare aur saaf bante hain.':P.mode===1?'Jis cheez ko sharp rakhna hai us par screen par tap karo.':'Gol area ke bahar blur. Tap karke jagah badlo.'),
+      ...PORTRAIT.filter(q=>(P.mode===2||!q[0].startsWith('size'))&&(P.mode<2||q[0]!=='edge')).map(([k,label,min,max])=>slider(label,min,max,shownLook[k],x=>{
+        if(S.portrait.style!=='Custom'&&k in LOOK){S.portrait={...S.portrait,...lookNow(),style:'Custom'};for(const b of $('styles').children)b.className=''}S.portrait[k]=x})),
+      el('div',{className:'row'},chip('↺ Portrait reset',false,()=>{S.portrait={...defaultsLow().portrait,on:P.on,mode:P.mode};forgetAI();refresh()})));
   }else{
     const c=caps(),set=track?track.getSettings():{};
     const hw=[['zoom','Zoom'],['exposureCompensation','Brightness (EV)'],['focusDistance','Manual focus'],['colorTemperature','White balance K'],['iso','ISO']],mine=S.hw[facing];
@@ -710,23 +1005,21 @@ function panel(){
 }
 const TABS=['Filters','Adjust','Lens','Portrait','Camera'];
 function showSheet(open){
-  $('sheet').hidden=!open;for(const id of ['zoom','modes','side'])$(id).style.visibility=open?'hidden':'';
+  $('sheet').hidden=!open;for(const id of ['zoom','modes','side','compare'])$(id).style.visibility=open?'hidden':'';
   if(open)$('quick').hidden=true;
 }
 function openTab(name){
   if(name!==tab)query='';tab=name;showSheet(true);
   for(const b of $('tabs').children)b.className=b.textContent===name?'on':'';panel();
 }
-for(const name of TABS){
-  $('tabs').append(el('button',{textContent:name,onclick:()=>openTab(name)}));
-  $('side').append(iconButton(name,name,{onclick:()=>openTab(name)}));
-}
-const compare=iconButton('eye','Original dekhne ke liye dabaye rakho',{id:'compare'});$('side').append(compare);
+for(const name of TABS)$('tabs').append(el('button',{textContent:name,onclick:()=>openTab(name)}));
+for(const name of ['Portrait','Lens','Filters'])$('side').append(iconButton(name,name,{onclick:()=>openTab(name)}));
+const compare=iconButton('eye','Original dekhne ke liye dabaye rakho',{id:'compare'});document.body.insertBefore(compare,$('dock'));
 let armed=0;
 const resetLow=el('button',{id:'resetLow',textContent:'↺ Neeche reset',onclick:()=>{
   if(Date.now()-armed>3000){armed=Date.now();say('Filter, lens, portrait, camera reset karne ke liye dobara dabao');return}
   armed=0;const keep={...Object.fromEntries(Object.keys(DEF_TOP).map(k=>[k,S[k]])),ui:S.ui,facing,videoMode};
-  S={...defaultsLow(),...keep};query='';point=null;comparing=false;AI.failed=false;AI.loading={};refresh();start().then(()=>say('Neeche ki sari settings reset ↺'));
+  S={...defaultsLow(),...keep};query='';point=null;comparing=false;AI.failed=false;hdBroken=false;openedRes=-1;forgetAI();refresh();start().then(()=>say('Neeche ki sari settings reset ↺'));
 }});
 $('sheetHead').append(resetLow,iconButton('close','Band karo',{id:'closeSheet',onclick:()=>showSheet(false)}));
 $('gear').innerHTML=icon('gear');$('torch').innerHTML=icon('torch');$('flip').innerHTML=icon('flip');
@@ -734,15 +1027,16 @@ $('gear').innerHTML=icon('gear');$('torch').innerHTML=icon('torch');$('flip').in
 /* quick settings (the "upar" settings) */
 function segment(names,current,set){return el('div',{className:'seg'},...names.map((n,i)=>chip(n,i===current,()=>{set(i);refresh()})))}
 function quick(){
-  const tile=(name,on,click)=>chip(name,on,()=>{click();refresh()});
-  const timers=[0,3,5,10];
+  const tile=(ic,name,on,click)=>{const b=el('button',{className:on?'on':'',onclick:()=>{click();refresh()}});b.innerHTML=icon(ic);b.append(el('span',{textContent:name}));return b};
+  const timers=[0,3,5,10],order=[3,2,1,0];
   $('quick').textContent='';
   $('quick').append(
-    segment(ASPECTS.map(a=>a[0]),S.aspect,i=>{if(!rec){S.aspect=i;resetSteady()}}),
+    segment(order.map(i=>ASPECTS[i][0]),order.indexOf(S.aspect),i=>{if(!rec){S.aspect=order[i];resetSteady()}}),
     segment(timers.map(t=>t?t+'s':'Off'),timers.indexOf(S.timer),i=>{cancelTimer();S.timer=timers[i]}),
-    el('div',{className:'tiles'},tile('▦ Grid',S.grid,()=>S.grid=!S.grid),tile('⊖ Level',S.level,()=>S.level=!S.level),
-      tile('✎ Watermark',S.watermark,()=>S.watermark=!S.watermark),tile('💧 Liquid Glass',S.ui.glass,()=>S.ui.glass=!S.ui.glass),
-      tile('🔊 Sound',S.ui.sound,()=>S.ui.sound=!S.ui.sound),tile('✨ HD photo',S.hdPhoto,()=>S.hdPhoto=!S.hdPhoto)),
+    el('div',{className:'tiles'},tile('grid','Grid',S.grid,()=>S.grid=!S.grid),tile('level','Level',S.level,()=>S.level=!S.level),
+      tile('mark','Watermark',S.watermark,()=>S.watermark=!S.watermark),tile('sound','Sound',S.ui.sound,()=>S.ui.sound=!S.ui.sound),
+      tile('hd','HD photo',S.hdPhoto,()=>{S.hdPhoto=!S.hdPhoto;hdBroken=false}),tile('ai','AI scene',S.aiFilter,()=>S.aiFilter=!S.aiFilter),
+      tile('noise',['Noise off','Noise auto','Noise strong'][S.nr],S.nr>0,()=>S.nr=(S.nr+1)%3),tile('glass','Liquid Glass',S.ui.glass,()=>S.ui.glass=!S.ui.glass)),
     el('div',{className:'line'},el('button',{id:'resetTop',textContent:'↺ Upar reset',disabled:!!rec,onclick:()=>{
       cancelTimer();Object.assign(S,DEF_TOP);torchOn=false;refresh();applyHardware();say('Upar ki settings reset ↺')}}),
       el('button',{textContent:'More settings ›',onclick:()=>openMore('General')})));
@@ -769,28 +1063,37 @@ function more(){
         flick('Shutter sound','Photo lete waqt awaaz',U.sound,x=>U.sound=x),
         flick('Volume button se photo','Volume dabao, photo ya video shuru',U.volume,x=>U.volume=x),
         flick('Mirrored selfie','Front camera ki photo preview jaisi',S.mirror,x=>S.mirror=x),
+        flick('Auto rotate','Phone aada pakdo to photo bhi aadi save ho',U.rotate,x=>U.rotate=x),
         flick('Level line','Phone tedha hai ya seedha',S.level,x=>S.level=x),
         flick('Grid lines','',S.grid,x=>S.grid=x)));
     const text=el('input',{type:'text',value:U.markText,maxLength:40,placeholder:'Apna naam likho'});text.oninput=()=>{U.markText=text.value;persist()};
     body.append(card(flick('Watermark','Photo aur video par aapka text',S.watermark,x=>S.watermark=x),el('div',{className:'item'},text)));
   }else if(moreTab==='Photo'){
-    body.append(card(flick('HD photo','Camera ki full still photo lene ki koshish',S.hdPhoto,x=>S.hdPhoto=x),slider('Photo quality',60,100,S.jpeg,x=>S.jpeg=x)));
+    const noiseRow=()=>choices('Noise saaf',['Off','Auto','Strong'],S.nr,i=>S.nr=i);
+    body.append(card(flick('HD photo','Camera ki full still photo lene ki koshish',S.hdPhoto,x=>{S.hdPhoto=x;hdBroken=false}),slider('Photo quality',60,100,S.jpeg,x=>S.jpeg=x),noiseRow()),
+      note('Auto: andhere me daane (noise) apne aap saaf karta hai.'));
   }else{
     if(rec)body.append(note('Recording ke beech quality nahi badalti.'));
-    else body.append(card(choices('Quality',RES.map(r=>r[0]),S.res,i=>{S.res=i;start()}),choices('FPS',['24','30','60'],[24,30,60].indexOf(S.fps),i=>{S.fps=[24,30,60][i];start()}),
-      note('4K par kai phone atakte hain. Saaf video ke liye 1080p try karo.')));
+    else{
+      const quality=choices('Quality',RES.map(r=>r[0]),S.res,i=>{S.res=i}),four=quality.lastChild;
+      if(can4K[facing]===false){four.disabled=true;four.textContent='4K ✕'}
+      body.append(card(quality,choices('FPS',['24','30','60'],[24,30,60].indexOf(S.fps),i=>{S.fps=[24,30,60][i];openedRes=-1}),choices('Noise saaf',['Off','Auto','Strong'],S.nr,i=>S.nr=i)),
+        note(can4K[facing]===false?'Is camera me 4K nahi hai, jo sabse achha hai wahi chalega.':'Sabse saaf aur smooth 4K: filter Normal, lens/portrait off. Tab video seedha camera se record hota hai.'));
+    }
     body.append(card(flick('Steady shot','Software stabilisation (beta), picture thodi crop hoti hai',S.steady,x=>{S.steady=x;resetSteady()}),slider('Steady power',0,100,S.steadyAmt,x=>S.steadyAmt=x)));
   }
   body.scrollTop=scroll;
 }
 
 /* modes, zoom, theme */
-const MODE_NAMES=['Portrait','Photo','Video'];
-const modeNow=()=>videoMode?'Video':S.portrait.on?'Portrait':'Photo';
+const MODE_NAMES=['Night','Portrait','Photo','Video'];
+const modeNow=()=>videoMode?'Video':S.night?'Night':S.portrait.on?'Portrait':'Photo';
 for(const name of MODE_NAMES)$('modes').append(el('button',{textContent:name,onclick:()=>{
-  cancelTimer();const was=videoMode;videoMode=name==='Video';S.videoMode=videoMode;
-  if(name!=='Video'){const on=name==='Portrait';if(on!==S.portrait.on){S.portrait.on=on;forgetAI()}}else if(S.portrait.on){S.portrait.on=false;forgetAI()}
-  refresh();if(was!==videoMode)start();else if(name==='Portrait')say('Portrait ki setting side ke 👤 button me hai');
+  cancelTimer();videoMode=name==='Video';S.videoMode=videoMode;S.night=name==='Night';
+  const portrait=name==='Portrait';if(portrait!==S.portrait.on){S.portrait.on=portrait;forgetAI()}
+  openedRes=videoMode!==!!stream?.getAudioTracks().length?-1:openedRes;
+  refresh();
+  if(name==='Portrait')say('Style chunne ke liye side ka 👤 button dabao');if(name==='Night')say('Night: photo lete waqt phone 1 second seedha rakho');
 }}));
 function zoomBar(){
   const r=caps().zoom,box=$('zoom');box.hidden=!(r&&r.max>r.min);if(box.hidden)return;
@@ -809,9 +1112,14 @@ function sync(){
   window.Android?.setVolumeShutter?.(S.ui.volume);info();layout();
 }
 addEventListener('devicemotion',e=>{
-  const a=e.accelerationIncludingGravity;if(!S.level||!a||a.x==null)return;
+  const a=e.accelerationIncludingGravity;if(!a||a.x==null)return;
+  // which way is the phone being held? (kept as it was while the phone lies flat)
+  const ax=Math.abs(a.x),ay=Math.abs(a.y);let now=tilt;
+  if(ax>4&&ax>ay*1.4){now=a.x>0?-90:90;if(facing==='user'&&!S.mirror)now=-now}else if(ay>4&&ay>ax*1.4)now=a.y>0?0:180;
+  if(now!==tilt){tilt=now;info()}
+  if(!S.level)return;
   const line=$('level');line.hidden=Math.hypot(a.x,a.y)<3; // lying flat: nothing to level
-  const angle=Math.atan2(a.x,a.y)*180/Math.PI;line.style.transform=`rotate(${angle}deg)`;line.classList.toggle('flat',Math.abs(angle)<1.5);
+  const angle=Math.atan2(a.x,a.y)*180/Math.PI;line.style.transform=`rotate(${angle}deg)`;const lean=((angle%90)+90)%90;line.classList.toggle('flat',Math.min(lean,90-lean)<1.5);
 });
 let audio=null;
 function click(){ // short shutter tick
@@ -853,7 +1161,7 @@ $('stage').addEventListener('pointerdown',e=>{
   Object.assign($('ring').style,{left:e.clientX-r.s.left+'px',top:e.clientY-r.s.top+'px',opacity:1});setTimeout(()=>$('ring').style.opacity=0,900);
   // screen position -> position in the camera picture (this undoes crop, mirror and steady shot)
   const u=.5+(x-.5)*lastT.scale[0]+lastT.off[0],v=.5+(.5-y)*lastT.scale[1]+lastT.off[1],spot={x:clamp(u,0,1),y:clamp(1-v,0,1)};
-  if(S.portrait.on){S.portrait.x=x;S.portrait.y=1-y;aim={...spot};AI.mask=null;AI.last.object=0;persist()}
+  if(S.portrait.on){S.portrait.x=x;S.portrait.y=1-y;if(S.portrait.mode===1){AI.gen++;AI.mask=null;AI.ref=null;aim={...spot};AI.last.object=0}persist()}
   point=spot;applyHardware();
 });
 $('stage').addEventListener('pointermove',e=>{

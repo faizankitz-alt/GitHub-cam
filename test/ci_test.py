@@ -41,15 +41,27 @@ with sync_playwright() as p:
             page.evaluate(setup)
             if kind == 'face':
                 page.wait_for_function('AI.faces.length > 0', timeout=90000)
-                check('face', True, f'faces={page.evaluate("AI.faces.length")}')
+                f = page.evaluate('({top:AI.faces[0][10].y, chin:AI.faces[0][152].y, mode:AI.mode})')
+                check('face', f['top'] < f['chin'] and f['mode'] == 'worker', str(f))
             else:
                 page.wait_for_function('AI.mask !== null', timeout=90000)
                 page.wait_for_timeout(2500)
                 m = page.evaluate("""()=>{const d=AI.mask,w=AI.mw,h=AI.mh,at=(x,y)=>d[Math.floor(y*h)*w+Math.floor(x*w)];
-                    return {area:d.filter(v=>v>127).length/d.length,centre:at(.5,.6),corner:(at(.02,.02)+at(.97,.02))/2,tap:at(aim.x,aim.y),failed:AI.failed}}""")
+                    const row=(a,b)=>{let s=0;for(let i=Math.floor(a*h)*w;i<Math.floor(b*h)*w;i++)s+=d[i]>127;return s/((b-a)*h*w)};
+                    return {area:d.filter(v=>v>127).length/d.length,centre:at(.5,.6),top:row(0,.2),bottom:row(.8,1),corner:(at(.02,.02)+at(.97,.02))/2,tap:at(aim.x,aim.y),failed:AI.failed}}""")
                 ok = 0.02 < m['area'] < 0.9 and not m['failed']
-                ok = ok and (m['centre'] > 127 and m['corner'] < 127 if kind == 'person' else m['tap'] > 127)
+                if kind == 'person':
+                    # shoulders fill the bottom of this photo, so an upside-down mask is caught here
+                    ok = ok and m['centre'] > 127 and m['corner'] < 127 and m['bottom'] > m['top']
+                    still = page.evaluate("""async()=>{const o=await ask('fine',video,video.videoWidth,video.videoHeight),d=o.mask,w=o.w,h=o.h,
+                        row=(a,b)=>{let s=0;for(let i=Math.floor(a*h)*w;i<Math.floor(b*h)*w;i++)s+=d[i]>127;return s/((b-a)*h*w)};
+                        return {centre:d[Math.floor(.6*h)*w+(w>>1)],top:row(0,.2),bottom:row(.8,1)}}""")
+                    check('still-portrait', still['centre'] > 127 and still['bottom'] > still['top'], str({k: round(v, 2) for k, v in still.items()}))
+                else:
+                    ok = ok and m['tap'] > 127
                 check(kind, ok, str({k: round(v, 2) for k, v in m.items()}))
+                mode = page.evaluate('[AI.mode, AI.workerOK]')
+                check(kind + '-background-worker', mode == ['worker', True], str(mode))
         except Exception as e:
             check(kind, False, str(e).split('\n')[0] + ' | ' + page.evaluate("document.getElementById('msg').textContent"))
         page.close()
