@@ -47,6 +47,7 @@ public class MainActivity extends Activity {
         web.getSettings().setJavaScriptEnabled(true);
         web.getSettings().setDomStorageEnabled(true); // remembers camera settings
         web.getSettings().setMediaPlaybackRequiresUserGesture(false);
+        web.getSettings().setTextZoom(100); // a large system font must not push buttons off the screen
         web.addJavascriptInterface(new Bridge(), "Android");
         // Serves the bundled AI files. Every other web request is refused, so nothing is loaded from the internet.
         web.setWebViewClient(new WebViewClient() {
