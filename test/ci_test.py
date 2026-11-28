@@ -3,7 +3,7 @@ import base64, pathlib, sys, urllib.request
 from playwright.sync_api import sync_playwright
 
 ASSETS = pathlib.Path('app/src/main/assets')
-TYPES = {'.mjs': 'text/javascript', '.js': 'text/javascript', '.wasm': 'application/wasm'}
+TYPES = {'.mjs': 'text/javascript', '.cjs': 'text/javascript', '.js': 'text/javascript', '.wasm': 'application/wasm'}
 IMAGES = {n: 'data:image/jpeg;base64,' + base64.b64encode(urllib.request.urlopen(
     f'https://storage.googleapis.com/mediapipe-assets/{n}.jpg', timeout=60).read()).decode()
     for n in ('portrait', 'cats_and_dogs')}
