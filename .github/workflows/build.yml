@@ -35,7 +35,8 @@ jobs:
           python -m playwright install --with-deps chromium
           python test/ci_test.py
       - run: gradle assembleDebug --no-daemon
+      - run: cp app/build/outputs/apk/debug/app-debug.apk KezmoCam-v5.1.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: KezmoCam-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: KezmoCam-v5.1-APK
+          path: KezmoCam-v5.1.apk

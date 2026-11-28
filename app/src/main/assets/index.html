@@ -192,16 +192,17 @@ const PRESETS={
 const zeros=()=>Object.fromEntries(PARAMS.map(p=>[p[0],0]));
 const presetVals=code=>{const o=zeros();for(const k in code)o[PARAMS[CODES.indexOf(k)][0]]=code[k];return o};
 
-const PORTRAIT=[['blur','Background blur',0,100,60],['edge','Kinara (+ zyada sharp)',-50,50,10],['sizeX','Focus width',10,100,45],['sizeY','Focus height',10,100,60],
+const PORTRAIT=[['blur','Background blur',0,100,60],['edge','Kinara (+ zyada sharp)',-50,50,10],
 ['feather','Edge softness',1,100,22],['bokeh','Bokeh lights',0,100,0],['bgDark','Background dark',0,100,10],['bgLight','Background white',0,100,0],
 ['bgSat','Background color',-100,100,0],['bgWarm','Background warm/cool',-100,100,0],['subSat','Subject color',-100,100,0],['light','Subject light',-50,50,6],
 ['smooth','Skin smooth',0,100,20],['zoomBlur','Motion zoom',0,100,0]];
-const LOOK=Object.fromEntries(PORTRAIT.filter(p=>!['edge','sizeX','sizeY'].includes(p[0])).map(p=>[p[0],p[4]]));
+const LOOK=Object.fromEntries(PORTRAIT.filter(p=>p[0]!=='edge').map(p=>[p[0],p[4]]));
 const STYLES={'Natural':{blur:45,smooth:15},'Soft':{blur:55,smooth:50,light:10,bgLight:12,feather:35},'DSLR':{blur:90,bokeh:35,bgSat:10,feather:16},
 'Bokeh Lights':{blur:85,bokeh:100,bgDark:22},'Studio':{blur:50,bgDark:55,light:18,smooth:35},'Black Stage':{blur:30,bgDark:100,light:14},
 'Mono Studio':{blur:45,bgSat:-100,subSat:-100,bgDark:60,light:12},'Colour Pop':{blur:35,bgSat:-100,subSat:18},'White High-Key':{blur:60,bgLight:88,light:14,smooth:40},
 'Cinematic':{blur:65,bgWarm:-65,bgDark:25,subSat:6},'Golden':{blur:55,bgWarm:75,bokeh:45,light:10},'Motion Zoom':{blur:30,zoomBlur:85},'Vintage':{blur:40,bgWarm:35,bgSat:-45,smooth:25}};
-const MODES=['AI Aadmi','AI Cheez (tap)','Oval'];
+const MODES=['AI Aadmi','AI Cheez (tap)'];
+const APP_VERSION='5.1';
 const DEF_TOP={timer:0,grid:false,aspect:0,level:false,watermark:false};
 const DEF_UI={rotate:true,glass:true,blur:14,tint:14,accent:'#ffd23f',sound:true,volume:true,keep:true,markText:'Shot on Kezmo Cam'};
 const defaultsLow=()=>({preset:'Normal',edits:{},strengths:{},lens:'None',
@@ -211,6 +212,7 @@ const defaults=()=>({...defaultsLow(),...DEF_TOP,ui:{...DEF_UI},facing:'environm
 let S=defaults(),custom={};
 try{const d=JSON.parse(localStorage.getItem('kezmo3')||'{}');if(d.S)S={...S,...d.S,portrait:{...S.portrait,...d.S.portrait},ui:{...S.ui,...d.S.ui}};custom=d.custom||{}}catch(e){}
 if(!S.ui.keep)S={...defaults(),ui:S.ui}; // "Keep settings" is off: start fresh
+if(!(S.portrait.mode<2))S.portrait.mode=0;
 const persist=()=>{try{localStorage.setItem('kezmo3',JSON.stringify({S,custom}))}catch(e){}};
 const original=n=>custom[n]?{...zeros(),...custom[n]}:presetVals(PRESETS[n]||{});
 const cur=()=>S.edits[S.preset]||original(S.preset);        // every filter keeps its own edits
@@ -240,7 +242,7 @@ const FS_BLUR=`precision mediump float;varying vec2 v;uniform sampler2D tex;unif
  gl_FragColor=c;}`;
 const FS_MAIN=`precision highp float;varying vec2 v;uniform sampler2D tex,soft,maskTex;uniform vec2 scale,off,px;uniform float seed,aspect,srcAspect,useMask;uniform vec4 warp[4];
 uniform float ${PARAMS.map(p=>p[0]==='log'?'logAmt':p[0]).join(',')};
-uniform float pOn,pX,pY,sizeX,sizeY,feather,bgDark,bgSat,light,smoothAmt,edge,bgLight,subSat,bgWarm,zoomBlur,nr;
+uniform float pOn,feather,bgDark,bgSat,light,smoothAmt,edge,bgLight,subSat,bgWarm,zoomBlur,nr;
 uniform vec2 srcPx,maskPx,maskOff,zc;
 float lum(vec3 c){return dot(c,vec3(.2126,.7152,.0722));}
 // bring colours back into range without flattening detail
@@ -269,8 +271,7 @@ void main(){
  vec3 n1=texture2D(tex,uv+vec2(px.x,0.)).rgb,n2=texture2D(tex,uv-vec2(px.x,0.)).rgb,n3=texture2D(tex,uv+vec2(0.,px.y)).rgb,n4=texture2D(tex,uv-vec2(0.,px.y)).rgb;
  float bg=0.;
  if(pOn>.5){
-  if(useMask>.5){float t=.5-edge*.6;bg=1.-smoothstep(t-feather*.4,t+feather*.4,matte(uv,raw));}
-  else{vec2 d=(v-vec2(pX,pY))/vec2(sizeX*.6,sizeY*.6);bg=smoothstep(1.-feather*.5,1.+feather,length(d));}
+  float t=.5-edge*.6;bg=1.-smoothstep(t-feather*.4,t+feather*.4,matte(uv,raw));
   float skin=step(c.b,c.g)*step(c.g,c.r)*smoothstep(.04,.12,c.r-c.b)*(1.-bg);
   if(smoothAmt>0.&&skin>0.){
    vec3 sum=c;float tw=1.;
@@ -363,7 +364,7 @@ function render(src,w,h,{target=view,still=false,ratio=0,mark=true}={}){
   if(glc.width!==g.W||glc.height!==g.H){glc.width=g.W;glc.height=g.H}
   gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,vtex);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
-  const P=lookNow(),ai=P.mode<2&&!AI.failed,pOn=P.on&&!comparing&&(!ai||!!AI.mask),useMask=pOn&&ai;
+  const P=lookNow(),pOn=P.on&&!comparing&&!!AI.mask,useMask=pOn; // blur only ever follows what the AI has found
   const vals=effective(),maskOff=still&&src!==video?[0,0]:AI.off;
   if(pOn||vals.clarity){
     const bw=Math.max(2,Math.round(g.W/g.H>1?360:360*g.W/g.H)),bh=Math.max(2,Math.round(bw*g.H/g.W));
@@ -395,9 +396,9 @@ function render(src,w,h,{target=view,still=false,ratio=0,mark=true}={}){
   gl.uniform1f(m.u('seed'),still?1:performance.now()%1000);gl.uniform1f(m.u('aspect'),g.W/g.H);gl.uniform1f(m.u('srcAspect'),w/h);gl.uniform1f(m.u('useMask'),useMask?1:0);
   for(const key in vals)gl.uniform1f(m.u(key==='log'?'logAmt':key),vals[key]);
   gl.uniform4fv(m.u('warp[0]'),warps(w,h));
-  const pu={pOn:pOn?1:0,pX:P.x,pY:P.y,sizeX:P.sizeX/100,sizeY:P.sizeY/100,feather:P.feather/100,bgDark:P.bgDark/100,bgSat:P.bgSat/100,light:P.light/100,smoothAmt:P.smooth/100,edge:P.edge/100,bgLight:P.bgLight/100,subSat:P.subSat/100,bgWarm:P.bgWarm/100,zoomBlur:P.zoomBlur/100,nr:comparing?0:nrAmount(w,h)};
+  const pu={pOn:pOn?1:0,feather:P.feather/100,bgDark:P.bgDark/100,bgSat:P.bgSat/100,light:P.light/100,smoothAmt:P.smooth/100,edge:P.edge/100,bgLight:P.bgLight/100,subSat:P.subSat/100,bgWarm:P.bgWarm/100,zoomBlur:P.zoomBlur/100,nr:comparing?0:nrAmount(w,h)};
   gl.uniform2f(m.u('srcPx'),1/w,1/h);gl.uniform2f(m.u('maskPx'),1/(AI.mw||256),1/(AI.mh||256));gl.uniform2fv(m.u('maskOff'),maskOff);
-  gl.uniform2fv(m.u('zc'),useMask?[(aimShown.x-.5-off[0])/scale[0]+.5,(.5-aimShown.y-off[1])/scale[1]+.5]:[P.x,P.y]);
+  gl.uniform2fv(m.u('zc'),[(aimShown.x-.5-off[0])/scale[0]+.5,(.5-aimShown.y-off[1])/scale[1]+.5]);
   for(const key in pu)gl.uniform1f(m.u(key),pu[key]);
   gl.drawArrays(gl.TRIANGLES,0,3);
   if(target.width!==g.W||target.height!==g.H){target.width=g.W;target.height=g.H;if(target===view)layout()}
@@ -488,7 +489,7 @@ const lookNow=()=>S.portrait.style==='Auto'?{...S.portrait,...LOOK,...STYLES[aut
 
 /* ---------- on-device AI (MediaPipe), loaded only when needed ---------- */
 const AIBASE='https://kezmocam.invalid/ai/';
-const AI={mode:window.Worker?'worker':'main',worker:null,workerOK:false,pending:new Map(),id:0,lib:null,tasks:{},busy:{},ready:{},took:{},failed:false,
+const AI={mode:window.Worker?'worker':'main',worker:null,workerOK:false,pending:new Map(),id:0,lib:null,tasks:{},busy:{},ready:{},took:{},failed:false,error:'',
 mask:null,mw:0,mh:0,off:[0,0],ref:null,gen:0,faces:[],seen:0,last:{},ts:0};
 let aimShown={x:.5,y:.5};
 const MODELS={person:['ImageSegmenter','selfie_segmenter.tflite',{runningMode:'VIDEO',outputConfidenceMasks:true,outputCategoryMask:false}],
@@ -585,10 +586,11 @@ function think(src,w,h){
     }).catch(e=>{
       if(e.message==='retry')return;
       console.warn('AI',name,e);
-      if(name==='face')say('Face lens is phone par load nahi hua');else{AI.failed=true;say('AI is phone par nahi chala, Oval blur use hoga')}
+      if(name==='face')say('Face lens is phone par load nahi hua');else{AI.failed=true;AI.error=String(e.message||e).slice(0,160);AI.mask=null;say('Portrait AI nahi chala. 👤 button me "AI dobara try karo" dabao')}
     }).finally(()=>{AI.busy[name]=false;AI.took[name]=performance.now()-began;AI.last[name]=performance.now()});
   }
 }
+const retryAI=()=>{if(AI.failed){AI.failed=false;AI.lib=null;AI.tasks={}}forgetAI()};
 const forgetAI=()=>{AI.gen++;AI.mask=null;AI.faces=[];AI.last={};AI.off=[0,0];AI.ref=null;aim={x:.5,y:.5};aimShown={x:.5,y:.5}};
 
 /* ---------- face lenses ---------- */
@@ -749,7 +751,7 @@ function applyHardware(){
 }
 function info(){
   if(!track)return;const s=track.getSettings();scene.shown=scene.seen;
-  $('info').textContent=[videoMode?`${s.width}×${s.height} • ${Math.round(s.frameRate||0)} fps`:S.night?'Night':S.hdPhoto&&!hdBroken&&window.ImageCapture?'HD photo':`${s.width}×${s.height}`,
+  $('info').textContent=['v'+APP_VERSION,videoMode?`${s.width}×${s.height} • ${Math.round(s.frameRate||0)} fps`:S.night?'Night':S.hdPhoto&&!hdBroken&&window.ImageCapture?'HD photo':`${s.width}×${s.height}`,
     rec&&rec.direct?'Direct (poori quality)':S.preset,S.aiFilter?'AI '+sceneName()[0]:'',S.steady?'Steady':'',S.portrait.on?(S.portrait.style==='Auto'?'Auto: '+autoStyle():S.portrait.style):'',
     S.lens!=='None'?S.lens:'',S.ui.rotate&&tilt?'↻ aadi photo':''].filter(Boolean).join(' • ');
 }
@@ -982,9 +984,10 @@ function panel(){
     const P=S.portrait,shownLook=lookNow(),style=name=>{S.portrait={...P,...(name==='Auto'?{}:{...LOOK,...STYLES[name]}),style:name,on:true};if(!P.on)forgetAI();refresh()};
     p.append(toggle('Portrait mode',P.on,x=>{P.on=x;if(x){S.night=false}forgetAI()}),
       el('div',{className:'row',id:'styles'},...['Auto',...Object.keys(STYLES)].map(n=>chip(n==='Auto'?'✨ Auto':n,P.style===n,()=>style(n)))),
-      choices('Pehchan',MODES,P.mode,i=>{P.mode=i;AI.failed=false;forgetAI()}),
-      note(P.mode===0?'AI insaan ko pehchan kar peeche blur karta hai. Saved photo me kinare aur saaf bante hain.':P.mode===1?'Jis cheez ko sharp rakhna hai us par screen par tap karo.':'Gol area ke bahar blur. Tap karke jagah badlo.'),
-      ...PORTRAIT.filter(q=>(P.mode===2||!q[0].startsWith('size'))&&(P.mode<2||q[0]!=='edge')).map(([k,label,min,max])=>slider(label,min,max,shownLook[k],x=>{
+      choices('Pehchan',MODES,P.mode,i=>{P.mode=i;retryAI()}),
+      ...(AI.failed?[note('AI error: '+AI.error),el('div',{className:'row'},chip('AI dobara try karo',false,()=>{retryAI();refresh()}))]:[]),
+      note(P.mode===0?'AI insaan ko pehchan kar peeche blur karta hai. Saved photo me kinare aur saaf bante hain.':'Jis cheez ko sharp rakhna hai us par screen par tap karo.'),
+      ...PORTRAIT.map(([k,label,min,max])=>slider(label,min,max,shownLook[k],x=>{
         if(S.portrait.style!=='Custom'&&k in LOOK){S.portrait={...S.portrait,...lookNow(),style:'Custom'};for(const b of $('styles').children)b.className=''}S.portrait[k]=x})),
       el('div',{className:'row'},chip('↺ Portrait reset',false,()=>{S.portrait={...defaultsLow().portrait,on:P.on,mode:P.mode};forgetAI();refresh()})));
   }else{
@@ -1067,7 +1070,8 @@ function more(){
         flick('Level line','Phone tedha hai ya seedha',S.level,x=>S.level=x),
         flick('Grid lines','',S.grid,x=>S.grid=x)));
     const text=el('input',{type:'text',value:U.markText,maxLength:40,placeholder:'Apna naam likho'});text.oninput=()=>{U.markText=text.value;persist()};
-    body.append(card(flick('Watermark','Photo aur video par aapka text',S.watermark,x=>S.watermark=x),el('div',{className:'item'},text)));
+    body.append(card(flick('Watermark','Photo aur video par aapka text',S.watermark,x=>S.watermark=x),el('div',{className:'item'},text)),
+      note(`Kezmo Cam v${APP_VERSION} • AI: ${AI.failed?'error':AI.mode==='worker'?'background':'normal'}`));
   }else if(moreTab==='Photo'){
     const noiseRow=()=>choices('Noise saaf',['Off','Auto','Strong'],S.nr,i=>S.nr=i);
     body.append(card(flick('HD photo','Camera ki full still photo lene ki koshish',S.hdPhoto,x=>{S.hdPhoto=x;hdBroken=false}),slider('Photo quality',60,100,S.jpeg,x=>S.jpeg=x),noiseRow()),
